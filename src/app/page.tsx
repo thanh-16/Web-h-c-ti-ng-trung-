@@ -4,12 +4,18 @@ import React, { useState } from 'react';
 import { HSK_CURRICULUM } from '@/data/hskCurriculum';
 import { AudioContextManager } from '@/services/audioContext';
 import { SpeechService } from '@/services/speechService';
-import { Volume2, Sparkles, CheckCircle2, BookOpen, Mic } from 'lucide-react';
+import { HanziCanvas } from '@/components/hanzi';
+import { Volume2, Sparkles, CheckCircle2, BookOpen, Mic, Edit3, BookMarked } from 'lucide-react';
 
 export default function HomePage() {
   const [selectedWord, setSelectedWord] = useState(HSK_CURRICULUM[0]);
+  const [activeTab, setActiveTab] = useState<'study' | 'canvas'>('study');
+  const [selectedCharIndex, setSelectedCharIndex] = useState(0);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [playingTone, setPlayingTone] = useState<number | null>(null);
+
+  const wordChars = Array.from(selectedWord.hanzi).filter((c) => /[\u4E00-\u9FFF]/.test(c));
+  const activeChar = wordChars[selectedCharIndex] || wordChars[0] || selectedWord.hanzi[0];
 
   const handleUnlockAudio = async () => {
     try {
@@ -154,7 +160,10 @@ export default function HomePage() {
               return (
                 <button
                   key={w.id}
-                  onClick={() => setSelectedWord(w)}
+                  onClick={() => {
+                    setSelectedWord(w);
+                    setSelectedCharIndex(0);
+                  }}
                   className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between ${
                     isSelected
                       ? 'bg-cyber-cyan/10 border-cyber-cyan/50 text-white shadow-sm'
@@ -179,10 +188,10 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Right: Detailed 4-Tier Interactive Card */}
+        {/* Right: Detailed 4-Tier Interactive Card & Hanzi Canvas */}
         <div className="lg:col-span-2 bg-obsidian-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
           <div>
-            {/* Header of Card */}
+            {/* Header of Card with View Tabs */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="text-xs px-2.5 py-1 rounded-md bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan font-semibold">
@@ -192,110 +201,192 @@ export default function HomePage() {
                   Bộ thủ: {selectedWord.radical} ({selectedWord.strokeCount} nét)
                 </span>
               </div>
-              <button
-                onClick={() => handlePlayTTS(selectedWord.hanzi)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyber-cyan text-obsidian-950 font-semibold text-xs hover:bg-cyan-300 transition-colors"
-              >
-                <Volume2 className="w-4 h-4" />
-                <span>Phát âm bản xứ</span>
-              </button>
-            </div>
 
-            {/* Main Word Display: Tier 1 & 2 */}
-            <div className="my-6 text-center">
-              <div className="text-6xl sm:text-7xl font-bold text-white tracking-wider font-serif">
-                {selectedWord.hanzi}
-              </div>
-              <div className="mt-2 text-xl font-medium text-cyber-cyan tracking-wide font-mono">
-                {selectedWord.pinyin}
-              </div>
-            </div>
-
-            {/* 4-Tier Breakdown */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-              <div className="p-4 rounded-xl bg-obsidian-950/80 border border-slate-800">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                  Tầng 3: Âm Hán Việt
-                </span>
-                <div className="text-lg font-bold text-white mt-1">{selectedWord.sinoVietnamese}</div>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Cầu nối ghi nhớ nhanh: 60%+ từ ngữ tương ứng trong tiếng Việt.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-obsidian-950/80 border border-slate-800">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                  Tầng 4: Nghĩa Tiếng Việt
-                </span>
-                <div className="text-lg font-bold text-white mt-1">{selectedWord.vietnameseMeaning}</div>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Ý nghĩa ứng dụng thực tế trong giao tiếp hàng ngày.
-                </p>
-              </div>
-            </div>
-
-            {/* Radical & Decomposition Info */}
-            <div className="mt-4 p-4 rounded-xl bg-obsidian-950/50 border border-slate-800/80 space-y-2 text-xs">
-              <div>
-                <span className="font-semibold text-slate-300">Ý nghĩa bộ thủ: </span>
-                <span className="text-slate-400">{selectedWord.radicalMeaning}</span>
-              </div>
-              {selectedWord.decomposition && (
-                <div>
-                  <span className="font-semibold text-slate-300">Chiết tự cấu trúc: </span>
-                  <span className="text-slate-400">{selectedWord.decomposition}</span>
+              {/* View Mode Toggle: 4-Tier Study vs Hanzi Canvas */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-obsidian-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('study')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      activeTab === 'study'
+                        ? 'bg-cyber-cyan text-obsidian-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <BookMarked className="w-3.5 h-3.5" />
+                    <span>Thẻ từ vựng</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('canvas')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      activeTab === 'canvas'
+                        ? 'bg-cyber-cyan text-obsidian-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Luyện viết nét</span>
+                  </button>
                 </div>
-              )}
-              {selectedWord.mnemonic && (
-                <div>
-                  <span className="font-semibold text-amber-400">Mẹo nhớ Hán - Việt: </span>
-                  <span className="text-slate-300 font-medium">{selectedWord.mnemonic}</span>
-                </div>
-              )}
-              {selectedWord.toneAnalysis && (
-                <div>
-                  <span className="font-semibold text-cyber-cyan">Phân tích thanh điệu: </span>
-                  <span className="text-slate-300">{selectedWord.toneAnalysis}</span>
-                </div>
-              )}
-            </div>
 
-            {/* Example Context Sentence */}
-            <div className="mt-4 p-4 rounded-xl bg-slate-900/60 border border-cyber-cyan/20">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-cyber-cyan uppercase tracking-wider">
-                  Mẫu câu ngữ cảnh thực tế
-                </span>
                 <button
-                  onClick={() => handlePlayTTS(selectedWord.exampleSentence.chinese)}
-                  className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                  onClick={() => handlePlayTTS(selectedWord.hanzi)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition-colors"
+                  title="Phát âm bản xứ"
                 >
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span>Nghe câu</span>
+                  <Volume2 className="w-4 h-4 text-cyber-cyan" />
+                  <span className="hidden sm:inline">Phát âm</span>
                 </button>
               </div>
-              <div className="text-sm font-semibold text-white font-serif">
-                {selectedWord.exampleSentence.chinese}
-              </div>
-              <div className="text-xs text-cyber-cyan font-mono mt-0.5">
-                {selectedWord.exampleSentence.pinyin}
-              </div>
-              <div className="text-xs text-slate-300 mt-1">
-                {selectedWord.exampleSentence.vietnamese}
-              </div>
-              {selectedWord.exampleSentence.sinoVietnamese && (
-                <div className="text-[11px] text-slate-400 italic mt-0.5">
-                  Hán Việt: {selectedWord.exampleSentence.sinoVietnamese}
-                </div>
-              )}
             </div>
+
+            {/* TAB 1: 4-Tier Sino-Vietnamese Vocabulary View */}
+            {activeTab === 'study' && (
+              <>
+                {/* Main Word Display: Tier 1 & 2 */}
+                <div className="my-6 text-center">
+                  <div className="text-6xl sm:text-7xl font-bold text-white tracking-wider font-serif">
+                    {selectedWord.hanzi}
+                  </div>
+                  <div className="mt-2 text-xl font-medium text-cyber-cyan tracking-wide font-mono">
+                    {selectedWord.pinyin}
+                  </div>
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('canvas')}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyber-cyan/15 hover:bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/30 text-xs font-bold transition-all shadow-sm"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      <span>Mở bảng luyện viết nét cho '{selectedWord.hanzi}'</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4-Tier Breakdown */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                  <div className="p-4 rounded-xl bg-obsidian-950/80 border border-slate-800">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                      Tầng 3: Âm Hán Việt
+                    </span>
+                    <div className="text-lg font-bold text-white mt-1">{selectedWord.sinoVietnamese}</div>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                      Cầu nối ghi nhớ nhanh: 60%+ từ ngữ tương ứng trong tiếng Việt.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-obsidian-950/80 border border-slate-800">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                      Tầng 4: Nghĩa Tiếng Việt
+                    </span>
+                    <div className="text-lg font-bold text-white mt-1">{selectedWord.vietnameseMeaning}</div>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                      Ý nghĩa ứng dụng thực tế trong giao tiếp hàng ngày.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Radical & Decomposition Info */}
+                <div className="mt-4 p-4 rounded-xl bg-obsidian-950/50 border border-slate-800/80 space-y-2 text-xs">
+                  <div>
+                    <span className="font-semibold text-slate-300">Ý nghĩa bộ thủ: </span>
+                    <span className="text-slate-400">{selectedWord.radicalMeaning}</span>
+                  </div>
+                  {selectedWord.decomposition && (
+                    <div>
+                      <span className="font-semibold text-slate-300">Chiết tự cấu trúc: </span>
+                      <span className="text-slate-400">{selectedWord.decomposition}</span>
+                    </div>
+                  )}
+                  {selectedWord.mnemonic && (
+                    <div>
+                      <span className="font-semibold text-amber-400">Mẹo nhớ Hán - Việt: </span>
+                      <span className="text-slate-300 font-medium">{selectedWord.mnemonic}</span>
+                    </div>
+                  )}
+                  {selectedWord.toneAnalysis && (
+                    <div>
+                      <span className="font-semibold text-cyber-cyan">Phân tích thanh điệu: </span>
+                      <span className="text-slate-300">{selectedWord.toneAnalysis}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Example Context Sentence */}
+                <div className="mt-4 p-4 rounded-xl bg-slate-900/60 border border-cyber-cyan/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-cyber-cyan uppercase tracking-wider">
+                      Mẫu câu ngữ cảnh thực tế
+                    </span>
+                    <button
+                      onClick={() => handlePlayTTS(selectedWord.exampleSentence.chinese)}
+                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                      <span>Nghe câu</span>
+                    </button>
+                  </div>
+                  <div className="text-sm font-semibold text-white font-serif">
+                    {selectedWord.exampleSentence.chinese}
+                  </div>
+                  <div className="text-xs text-cyber-cyan font-mono mt-0.5">
+                    {selectedWord.exampleSentence.pinyin}
+                  </div>
+                  <div className="text-xs text-slate-300 mt-1">
+                    {selectedWord.exampleSentence.vietnamese}
+                  </div>
+                  {selectedWord.exampleSentence.sinoVietnamese && (
+                    <div className="text-[11px] text-slate-400 italic mt-0.5">
+                      Hán Việt: {selectedWord.exampleSentence.sinoVietnamese}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* TAB 2: HanziWriter Interactive Stroke Canvas View */}
+            {activeTab === 'canvas' && (
+              <div className="flex flex-col items-center gap-4 py-2">
+                {/* Character Picker for Multi-character words */}
+                {wordChars.length > 1 && (
+                  <div className="flex items-center gap-2 p-1.5 bg-obsidian-950/80 rounded-xl border border-slate-800 text-xs">
+                    <span className="text-slate-400 font-medium px-2">Chọn chữ luyện viết:</span>
+                    {wordChars.map((char, idx) => (
+                      <button
+                        key={char + idx}
+                        type="button"
+                        onClick={() => setSelectedCharIndex(idx)}
+                        className={`px-3 py-1 rounded-lg font-serif text-base font-bold transition-all ${
+                          selectedCharIndex === idx
+                            ? 'bg-cyber-cyan text-obsidian-950 shadow-sm scale-105'
+                            : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+                        }`}
+                      >
+                        {char}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* HanziWriter Canvas Engine */}
+                <HanziCanvas
+                  character={activeChar}
+                  pinyin={selectedWord.pinyin}
+                  sinoVietnamese={selectedWord.sinoVietnamese}
+                  meaning={selectedWord.vietnameseMeaning}
+                />
+              </div>
+            )}
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <span>Dự án HanziVibe (汉字韵) • Milestone M1</span>
+            <span>Dự án HanziVibe (汉字韵) • Milestone M2 (Hanzi Stroke Canvas)</span>
             <span className="font-mono text-emerald-400">Next.js 15 • React 19 • PWA</span>
           </div>
         </div>
+
       </section>
     </main>
   );

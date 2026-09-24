@@ -5,11 +5,12 @@ import { HSK_CURRICULUM } from '@/data/hskCurriculum';
 import { AudioContextManager } from '@/services/audioContext';
 import { SpeechService } from '@/services/speechService';
 import { HanziCanvas } from '@/components/hanzi';
-import { Volume2, Sparkles, CheckCircle2, BookOpen, Mic, Edit3, BookMarked } from 'lucide-react';
+import { ToneStudio } from '@/components/pitch';
+import { Volume2, Sparkles, CheckCircle2, BookOpen, Mic, Edit3, BookMarked, Activity } from 'lucide-react';
 
 export default function HomePage() {
   const [selectedWord, setSelectedWord] = useState(HSK_CURRICULUM[0]);
-  const [activeTab, setActiveTab] = useState<'study' | 'canvas'>('study');
+  const [activeTab, setActiveTab] = useState<'study' | 'canvas' | 'pitch'>('study');
   const [selectedCharIndex, setSelectedCharIndex] = useState(0);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [playingTone, setPlayingTone] = useState<number | null>(null);
@@ -202,7 +203,7 @@ export default function HomePage() {
                 </span>
               </div>
 
-              {/* View Mode Toggle: 4-Tier Study vs Hanzi Canvas */}
+              {/* View Mode Toggle: 4-Tier Study vs Hanzi Canvas vs Pitch F0 */}
               <div className="flex items-center gap-2">
                 <div className="flex items-center bg-obsidian-950 p-1 rounded-xl border border-slate-800">
                   <button
@@ -229,6 +230,18 @@ export default function HomePage() {
                     <Edit3 className="w-3.5 h-3.5" />
                     <span>Luyện viết nét</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('pitch')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      activeTab === 'pitch'
+                        ? 'bg-cyber-cyan text-obsidian-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Luyện 4 thanh điệu (F0)</span>
+                  </button>
                 </div>
 
                 <button
@@ -253,14 +266,22 @@ export default function HomePage() {
                   <div className="mt-2 text-xl font-medium text-cyber-cyan tracking-wide font-mono">
                     {selectedWord.pinyin}
                   </div>
-                  <div className="mt-3">
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => setActiveTab('canvas')}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyber-cyan/15 hover:bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/30 text-xs font-bold transition-all shadow-sm"
+                      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-cyber-cyan/15 hover:bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/30 text-xs font-bold transition-all shadow-sm"
                     >
-                      <Edit3 className="w-4 h-4" />
-                      <span>Mở bảng luyện viết nét cho '{selectedWord.hanzi}'</span>
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Luyện viết nét</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('pitch')}
+                      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 text-xs font-bold transition-all shadow-sm"
+                    >
+                      <Mic className="w-3.5 h-3.5" />
+                      <span>Luyện phát âm F0</span>
                     </button>
                   </div>
                 </div>
@@ -379,10 +400,17 @@ export default function HomePage() {
                 />
               </div>
             )}
+
+            {/* TAB 3: Real-Time Web Audio YIN Pitch Contour F0 Studio */}
+            {activeTab === 'pitch' && (
+              <div className="py-2">
+                <ToneStudio selectedWord={selectedWord} />
+              </div>
+            )}
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <span>Dự án HanziVibe (汉字韵) • Milestone M2 (Hanzi Stroke Canvas)</span>
+            <span>Dự án HanziVibe (汉字韵) • Milestone M3 (YIN Pitch F0 & Hanzi Stroke Canvas)</span>
             <span className="font-mono text-emerald-400">Next.js 15 • React 19 • PWA</span>
           </div>
         </div>

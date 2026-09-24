@@ -308,29 +308,46 @@ export function scorePitchContour(
     let slopeScore = 50;
     let correlation = 0;
 
+    let meanUser = 0;
+    for (let i = 0; i < steps; i++) meanUser += resampledUser[i];
+    meanUser /= steps;
+
+    let userVariance = 0;
+    for (let i = 0; i < steps; i++) {
+      const d = resampledUser[i] - meanUser;
+      userVariance += d * d;
+    }
+    const userStdDev = Math.sqrt(userVariance / steps);
+    const userVarianceNorm = userVariance / steps;
+
     if (t === 1) {
       // Thanh 1: đường chuẩn nằm ngang không đổi. Đo độ dao động (variance/stdDev) của học viên
-      let meanUser = 0;
-      for (let i = 0; i < steps; i++) meanUser += resampledUser[i];
-      meanUser /= steps;
-
-      let variance = 0;
-      for (let i = 0; i < steps; i++) {
-        const d = resampledUser[i] - meanUser;
-        variance += d * d;
-      }
-      const stdDev = Math.sqrt(variance / steps);
       // StdDev < 0.2 Chao là rất phẳng (100%), > 1.0 Chao là dao động mạnh
-      slopeScore = Math.max(0, Math.min(100, 100 - Math.max(0, stdDev - 0.15) * 80));
-      correlation = stdDev < 0.35 ? 0.95 : Math.max(0, 1.0 - stdDev);
+      slopeScore = Math.max(0, Math.min(100, 100 - Math.max(0, userStdDev - 0.15) * 80));
+      correlation = userStdDev < 0.35 ? 0.95 : Math.max(0, 1.0 - userStdDev);
     } else {
       correlation = calculatePearsonCorrelation(resampledUser, targetPoints);
       // Ánh xạ r in [-1, 1] sang [0, 100]
       slopeScore = Math.max(0, Math.min(100, ((correlation + 1) / 2) * 100));
     }
 
+    // Kiểm tra hiện tượng âm giọng ngang phẳng (flat monotone) trên Thanh 4 (yêu cầu rơi dốc từ 5 xuống 1)
+    const startChao = resampledUser[0];
+    const endChao = resampledUser[steps - 1];
+    const isFlatOnTone4 = t === 4 && (userVarianceNorm < 0.05 || Math.abs(endChao - startChao) < 1.0);
+
+    if (isFlatOnTone4) {
+      // Phạt nặng hướng dốc và khống chế điểm tối đa < 40%
+      slopeScore = Math.min(slopeScore, 10);
+    }
+
     // Điểm tổng hợp trọng số: 45% khoảng cách Chao, 55% hướng độ dốc
-    const combined = Math.round(0.45 * distanceScore + 0.55 * slopeScore);
+    let combined = Math.round(0.45 * distanceScore + 0.55 * slopeScore);
+
+    if (isFlatOnTone4) {
+      combined = Math.min(combined, 38);
+    }
+
     candidateScores[t] = { score: combined, mae, corr: correlation };
 
     if (combined > bestScore) {
@@ -398,6 +415,25 @@ function generatePedagogicalFeedback(
   }
 
   // Điểm dưới 65: Phân tích lỗi cụ thể
+  let mean = 0;
+  for (let i = 0; i < userCurve.length; i++) mean += userCurve[i];
+  mean /= userCurve.length;
+
+  let variance = 0;
+  for (let i = 0; i < userCurve.length; i++) {
+    const d = userCurve[i] - mean;
+    variance += d * d;
+  }
+  variance /= userCurve.length;
+
+  const startChao = userCurve[0];
+  const endChao = userCurve[userCurve.length - 1];
+
+  // Nếu người học phát âm phẳng/ngang trên Thanh 4 (yêu cầu rơi dốc 5 -> 1)
+  if (targetTone === 4 && (variance < 0.05 || Math.abs(endChao - startChao) < 1.0)) {
+    return 'Rơi giọng quá nông, cần dứt khoát hơn từ đỉnh dội thẳng xuống đáy.';
+  }
+
   if (detectedTone !== null && detectedTone !== targetTone) {
     const toneNames: Record<MandarinTone, string> = {
       1: 'Thanh 1 (ngang bằng)',
@@ -407,10 +443,6 @@ function generatePedagogicalFeedback(
     };
     return `Âm của bạn đang thiên về ${toneNames[detectedTone]}. Hãy lắng nghe lại âm mẫu và điều chỉnh hướng giọng!`;
   }
-
-  // Kiểm tra xu hướng đầu - cuối của userCurve
-  const startChao = userCurve[0];
-  const endChao = userCurve[userCurve.length - 1];
 
   switch (targetTone) {
     case 1:

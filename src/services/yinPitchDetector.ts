@@ -57,15 +57,30 @@ export class YinPitchDetector {
    * Tính toán RMS (Root-Mean-Square) phục vụ Voice Activity Detection (VAD)
    */
   public calculateRms(buffer: Float32Array): number {
-    let sumSquares = 0.0;
+    let sum0 = 0.0;
+    let sum1 = 0.0;
     const len = buffer.length;
     if (len === 0) return 0;
 
-    for (let i = 0; i < len; i++) {
-      const val = buffer[i];
-      sumSquares += val * val;
+    let i = 0;
+    const limit = len - 7;
+    for (; i < limit; i += 8) {
+      const v0 = buffer[i];
+      const v1 = buffer[i + 1];
+      const v2 = buffer[i + 2];
+      const v3 = buffer[i + 3];
+      const v4 = buffer[i + 4];
+      const v5 = buffer[i + 5];
+      const v6 = buffer[i + 6];
+      const v7 = buffer[i + 7];
+      sum0 += (v0 * v0 + v1 * v1) + (v2 * v2 + v3 * v3);
+      sum1 += (v4 * v4 + v5 * v5) + (v6 * v6 + v7 * v7);
     }
-    return Math.sqrt(sumSquares / len);
+    for (; i < len; i++) {
+      const val = buffer[i];
+      sum0 += val * val;
+    }
+    return Math.sqrt((sum0 + sum1) / len);
   }
 
   /**
@@ -120,14 +135,50 @@ export class YinPitchDetector {
     }
 
     // BƯỚC 1: Hàm sai phân d_t(tau) = sum_j (x_j - x_{j+tau})^2
-    // Tính từ tau = 1 đến maxLag để đảm bảo runningSum ở Bước 2 chính xác tuyệt đối
-    for (let tau = 1; tau <= maxLag; tau++) {
-      let sum = 0.0;
-      for (let j = 0; j < halfLen; j++) {
-        const delta = buffer[j] - buffer[j + tau];
-        sum += delta * delta;
+    // Tính từ tau = 1 đến calcLag (maxLag + 1) để đảm bảo runningSum ở Bước 2
+    // và nội suy parabol ở Bước 4 không bao giờ đọc dữ liệu chưa khởi tạo.
+    // Áp dụng 16x 4-way ILP unrolling với offset pointer để đạt tốc độ tối đa V8 JIT (<0.3ms/frame).
+    const calcLag = Math.min(halfLen - 1, maxLag + 1);
+    const unrollLimit = halfLen - 15;
+
+    for (let tau = 1; tau <= calcLag; tau++) {
+      let sum0 = 0.0;
+      let sum1 = 0.0;
+      let sum2 = 0.0;
+      let sum3 = 0.0;
+      let j = 0;
+      let offset = tau;
+
+      for (; j < unrollLimit; j += 16, offset += 16) {
+        const d0 = buffer[j] - buffer[offset];
+        const d1 = buffer[j + 1] - buffer[offset + 1];
+        const d2 = buffer[j + 2] - buffer[offset + 2];
+        const d3 = buffer[j + 3] - buffer[offset + 3];
+        const d4 = buffer[j + 4] - buffer[offset + 4];
+        const d5 = buffer[j + 5] - buffer[offset + 5];
+        const d6 = buffer[j + 6] - buffer[offset + 6];
+        const d7 = buffer[j + 7] - buffer[offset + 7];
+        sum0 += (d0 * d0 + d1 * d1) + (d2 * d2 + d3 * d3);
+        sum1 += (d4 * d4 + d5 * d5) + (d6 * d6 + d7 * d7);
+
+        const d8 = buffer[j + 8] - buffer[offset + 8];
+        const d9 = buffer[j + 9] - buffer[offset + 9];
+        const d10 = buffer[j + 10] - buffer[offset + 10];
+        const d11 = buffer[j + 11] - buffer[offset + 11];
+        const d12 = buffer[j + 12] - buffer[offset + 12];
+        const d13 = buffer[j + 13] - buffer[offset + 13];
+        const d14 = buffer[j + 14] - buffer[offset + 14];
+        const d15 = buffer[j + 15] - buffer[offset + 15];
+        sum2 += (d8 * d8 + d9 * d9) + (d10 * d10 + d11 * d11);
+        sum3 += (d12 * d12 + d13 * d13) + (d14 * d14 + d15 * d15);
       }
-      yinBuf[tau] = sum;
+
+      for (; j < halfLen; j++, offset++) {
+        const delta = buffer[j] - buffer[offset];
+        sum0 += delta * delta;
+      }
+
+      yinBuf[tau] = (sum0 + sum1) + (sum2 + sum3);
     }
 
     // BƯỚC 2: Hàm sai phân chuẩn hóa trung bình tích lũy d'_t(tau)
@@ -135,7 +186,7 @@ export class YinPitchDetector {
     yinBuf[0] = 1.0;
     let runningSum = 0.0;
 
-    for (let tau = 1; tau <= maxLag; tau++) {
+    for (let tau = 1; tau <= calcLag; tau++) {
       runningSum += yinBuf[tau];
       if (runningSum === 0) {
         yinBuf[tau] = 1.0;
@@ -145,14 +196,27 @@ export class YinPitchDetector {
     }
 
     // BƯỚC 3: Ngưỡng tuyệt đối (Absolute Thresholding, theta = 0.12)
+    // Quét từ tau = 2 để bắt chu kỳ cơ bản thực sự. Nếu chu kỳ rơi vào trước minLag,
+    // tức F0 > maxFrequency, phải từ chối ngay để tránh hiện tượng octave halving sang 2*tau.
     let tauEstimate = -1;
     let clarity = 0.0;
 
-    for (let tau = minLag; tau <= maxLag; tau++) {
+    for (let tau = 2; tau <= maxLag; tau++) {
       if (yinBuf[tau] < this.threshold) {
         // Tìm đáy thung lũng cục bộ (local minimum)
-        while (tau + 1 <= maxLag && yinBuf[tau + 1] < yinBuf[tau]) {
+        while (tau + 1 <= calcLag && yinBuf[tau + 1] < yinBuf[tau]) {
           tau++;
+        }
+        if (tau < minLag || tau >= maxLag) {
+          return {
+            f0: 0,
+            clarity: 0,
+            rms,
+            isVoiced: false,
+            pitchHz: 0,
+            probability: 0,
+            rmsEnergy: rms,
+          };
         }
         tauEstimate = tau;
         clarity = Math.max(0.0, 1.0 - yinBuf[tau]);
@@ -160,19 +224,25 @@ export class YinPitchDetector {
       }
     }
 
-    // Nếu không có điểm nào dưới ngưỡng theta, tìm cực tiểu toàn cục trong dải [minLag, maxLag]
+    // Nếu không có điểm nào dưới ngưỡng theta, tìm cực tiểu cục bộ thực sự (valley) trong dải (minLag, maxLag)
     if (tauEstimate === -1) {
       let globalMin = Number.MAX_VALUE;
       let minTau = -1;
 
-      for (let tau = minLag; tau <= maxLag; tau++) {
-        if (yinBuf[tau] < globalMin) {
+      // Quét các điểm bên trong: minLag + 1 tới maxLag - 1 để tránh hiện tượng cắt cụt biên
+      for (let tau = minLag + 1; tau < maxLag; tau++) {
+        // Bắt buộc phải là điểm trũng cục bộ (turning point valley: yinBuf[tau-1] > yinBuf[tau] < yinBuf[tau+1])
+        if (
+          yinBuf[tau] < globalMin &&
+          yinBuf[tau] < yinBuf[tau - 1] &&
+          yinBuf[tau] < yinBuf[tau + 1]
+        ) {
           globalMin = yinBuf[tau];
           minTau = tau;
         }
       }
 
-      // Nếu cực tiểu toàn cục vẫn quá mờ (> 0.40), xác định là unvoiced (không có cao độ rõ ràng)
+      // Nếu cực tiểu toàn cục vẫn quá mờ (> 0.40) hoặc nằm ở biên không có điểm trũng, xác định là unvoiced
       if (globalMin > 0.40 || minTau === -1) {
         return {
           f0: 0,
@@ -191,7 +261,7 @@ export class YinPitchDetector {
 
     // BƯỚC 4: Nội suy Parabol (Parabolic Interpolation) để đạt độ chính xác dưới mẫu (sub-sample)
     let betterTau = tauEstimate as number;
-    if (tauEstimate > 1 && tauEstimate < halfLen - 1) {
+    if (tauEstimate > 1 && tauEstimate < calcLag) {
       const s0 = yinBuf[tauEstimate - 1];
       const s1 = yinBuf[tauEstimate];
       const s2 = yinBuf[tauEstimate + 1];

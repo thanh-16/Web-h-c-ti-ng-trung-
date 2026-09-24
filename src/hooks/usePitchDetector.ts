@@ -54,10 +54,15 @@ export function usePitchDetector(options: UsePitchDetectorOptions = {}) {
   // Baseline median pitch tracking
   const runningF0ValuesRef = useRef<number[]>([]);
 
+  // Asynchronous request sequence counter to prevent race conditions on rapid start/stop
+  const requestSeqRef = useRef<number>(0);
+
   /**
    * Dọn dẹp tài nguyên microphone và audio loop
    */
   const cleanupStream = useCallback(() => {
+    requestSeqRef.current += 1;
+
     if (animFrameIdRef.current) {
       cancelAnimationFrame(animFrameIdRef.current);
       animFrameIdRef.current = null;
@@ -84,13 +89,15 @@ export function usePitchDetector(options: UsePitchDetectorOptions = {}) {
    * Dừng thu âm và tính toán điểm khớp thanh điệu
    */
   const stopRecording = useCallback(() => {
+    requestSeqRef.current += 1;
     cleanupStream();
     setIsRecording(false);
 
     // Chấm điểm lượt thu âm vừa hoàn thành
     const recordedPoints = livePitchesRef.current;
     if (recordedPoints.length > 0) {
-      const finalResult = scorePitchContour(recordedPoints, targetTone);
+      const median = calculateMedianF0(runningF0ValuesRef.current, 180);
+      const finalResult = scorePitchContour(recordedPoints, targetTone, median);
       setToneResult(finalResult);
       onAnalysisComplete?.(finalResult);
     }
@@ -100,6 +107,7 @@ export function usePitchDetector(options: UsePitchDetectorOptions = {}) {
    * Bắt đầu thu âm với Web Audio API và YIN 60 FPS loop
    */
   const startRecording = useCallback(async () => {
+    const currentSeq = ++requestSeqRef.current;
     setError(null);
     setToneResult(null);
     setPitchHistory([]);
@@ -127,6 +135,13 @@ export function usePitchDetector(options: UsePitchDetectorOptions = {}) {
       }
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // Kiểm tra nếu người dùng đã bấm stop hoặc component unmount trong lúc chờ cấp quyền
+      if (currentSeq !== requestSeqRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
       streamRef.current = stream;
       setIsMicrophoneAllowed(true);
 

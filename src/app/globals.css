@@ -84,3 +84,45 @@ body {
 .glow-crimson {
   box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
 }
+
+/* 3D CSS Flashcard Transforms */
+.perspective-1000 {
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
+}
+
+/* Match Game Mismatch Shake Animation */
+@keyframes card-shake {
+  10%, 90% {
+    transform: translate3d(-2px, 0, 0) scale(1);
+  }
+  20%, 80% {
+    transform: translate3d(4px, 0, 0) scale(1.02);
+  }
+  30%, 50%, 70% {
+    transform: translate3d(-6px, 0, 0) scale(1.02);
+  }
+  40%, 60% {
+    transform: translate3d(6px, 0, 0) scale(1);
+  }
+}
+
+.animate-card-shake {
+  animation: card-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+

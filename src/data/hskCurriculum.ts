@@ -894,12 +894,28 @@ export const HSK_CURRICULUM: HskWord[] = [
 
 /**
  * Chuẩn hóa Pinyin loại bỏ dấu thanh để hỗ trợ tìm kiếm không dấu
+ * Thay thế biến thể umlaut [üǖǘǚǜ] thành 'v' TRƯỚC khi gọi normalize('NFD')
+ * để không bị tách dấu diaeresis thành 'u' thường
  */
 export function normalizePinyin(pinyin: string): string {
+  if (!pinyin) return '';
   return pinyin
+    .replace(/[üǖǘǚǜ]/gi, 'v')
+    .replace(/u\u0308/gi, 'v')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ü/g, 'v')
+    .toLowerCase();
+}
+
+/**
+ * Chuẩn hóa chuỗi tiếng Việt: loại bỏ dấu thanh, chuyển đ/Đ thành d và chuyển thành chữ thường
+ */
+export function normalizeVietnamese(text: string): string {
+  if (!text) return '';
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
     .toLowerCase();
 }
 
@@ -919,23 +935,78 @@ export function getHskWordsByLevel(level: 1 | 2 | 3): HskWord[] {
 }
 
 export function searchHskWords(keyword: string): HskWord[] {
-  if (!keyword || keyword.trim() === '') return HSK_CURRICULUM;
+  if (!keyword || typeof keyword !== 'string' || keyword.trim() === '') {
+    return HSK_CURRICULUM;
+  }
   const kw = keyword.toLowerCase().trim();
+  const kwNoSpace = kw.replace(/\s+/g, '');
   const kwNormalized = normalizePinyin(kw);
+  const kwNormNoSpace = kwNormalized.replace(/\s+/g, '');
+  const kwVi = normalizeVietnamese(kw);
+  const kwViNoSpace = kwVi.replace(/\s+/g, '');
+
+  // Kiểm tra xem từ khóa người dùng nhập có chứa dấu tiếng Việt hay không
+  // Nếu normalizeVietnamese(kw) === kw thì người dùng đang tìm kiếm không dấu (ví dụ: 'hoc', 'ban')
+  // Nếu có dấu (ví dụ: 'học' hoặc 'hóc'), chỉ so khớp chính xác có dấu để tránh tìm nhầm 'hóc' thành 'học'
+  const isUnaccentedVi = kwVi === kw;
 
   return HSK_CURRICULUM.filter((w) => {
     const rawPinyin = w.pinyin.toLowerCase();
+    const rawPinyinNoSpace = rawPinyin.replace(/\s+/g, '');
     const cleanPinyin = normalizePinyin(w.pinyin);
+    const cleanPinyinNoSpace = cleanPinyin.replace(/\s+/g, '');
     const numbered = w.pinyinNumbered.toLowerCase();
+    const numberedNoSpace = numbered.replace(/\s+/g, '');
 
-    return (
-      w.hanzi.includes(kw) ||
+    const svRaw = w.sinoVietnamese.toLowerCase();
+    const svRawNoSpace = svRaw.replace(/\s+/g, '');
+    const svNorm = normalizeVietnamese(w.sinoVietnamese);
+    const svNormNoSpace = svNorm.replace(/\s+/g, '');
+
+    const viRaw = w.vietnameseMeaning.toLowerCase();
+    const viRawNoSpace = viRaw.replace(/\s+/g, '');
+    const viNorm = normalizeVietnamese(w.vietnameseMeaning);
+    const viNormNoSpace = viNorm.replace(/\s+/g, '');
+
+    // Khớp theo chữ Hán
+    if (w.hanzi.includes(kw) || w.hanzi.includes(kwNoSpace)) {
+      return true;
+    }
+
+    // Khớp theo Pinyin (có dấu, không dấu, hoặc số thứ tự thanh điệu, có hoặc không có khoảng trắng)
+    if (
       rawPinyin.includes(kw) ||
+      rawPinyinNoSpace.includes(kwNoSpace) ||
       cleanPinyin.includes(kwNormalized) ||
+      cleanPinyinNoSpace.includes(kwNormNoSpace) ||
       numbered.includes(kw) ||
-      w.sinoVietnamese.toLowerCase().includes(kw) ||
-      w.vietnameseMeaning.toLowerCase().includes(kw)
-    );
+      numberedNoSpace.includes(kwNoSpace)
+    ) {
+      return true;
+    }
+
+    // Khớp theo âm Hán - Việt và Nghĩa tiếng Việt
+    if (isUnaccentedVi) {
+      if (
+        svNorm.includes(kwVi) ||
+        svNormNoSpace.includes(kwViNoSpace) ||
+        viNorm.includes(kwVi) ||
+        viNormNoSpace.includes(kwViNoSpace)
+      ) {
+        return true;
+      }
+    } else {
+      if (
+        svRaw.includes(kw) ||
+        svRawNoSpace.includes(kwNoSpace) ||
+        viRaw.includes(kw) ||
+        viRawNoSpace.includes(kwNoSpace)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   });
 }
 

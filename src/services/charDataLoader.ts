@@ -18,6 +18,9 @@ export const CACHE_STORAGE_NAME = 'hanzivibe-char-data-v1';
 // Tier 1: In-Memory Map Cache
 const memoryCache = new Map<string, CharacterJson>();
 
+// In-Flight Promise Cache for Request Deduplication
+const inFlightRequests = new Map<string, Promise<CharacterJson>>();
+
 /**
  * Saves character data to browser CacheStorage (Tier 2)
  */
@@ -60,85 +63,108 @@ export const resilientCharDataLoader: CharDataLoaderFn = async (
     throw err;
   }
 
-  // Tier 1: In-Memory Map Cache
+  // Tier 1: In-Memory Map Cache (0ms instant lookup)
   if (memoryCache.has(targetChar)) {
     const data = memoryCache.get(targetChar)!;
     if (onLoad) onLoad(data);
     return data;
   }
 
-  // Tier 2: Browser CacheStorage (PWA Offline Cache)
-  if (typeof window !== 'undefined' && 'caches' in window) {
+  // In-flight request deduplication: return existing pending promise if identical character is currently loading
+  if (inFlightRequests.has(targetChar)) {
     try {
-      const cache = await caches.open(CACHE_STORAGE_NAME);
-      const cachedResponse = await cache.match(`/data/hanzi/${encodeURIComponent(targetChar)}.json`);
-      if (cachedResponse && cachedResponse.ok) {
-        const data = (await cachedResponse.json()) as CharacterJson;
+      const data = await inFlightRequests.get(targetChar)!;
+      if (onLoad) onLoad(data);
+      return data;
+    } catch (err: any) {
+      if (onError) onError(err);
+      throw err;
+    }
+  }
+
+  const loadPromise = (async (): Promise<CharacterJson> => {
+    // Tier 2: Browser CacheStorage (PWA Offline Cache)
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      try {
+        const cache = await caches.open(CACHE_STORAGE_NAME);
+        const cachedResponse = await cache.match(`/data/hanzi/${encodeURIComponent(targetChar)}.json`);
+        if (cachedResponse && cachedResponse.ok) {
+          const data = (await cachedResponse.json()) as CharacterJson;
+          if (isValidCharacterJson(data)) {
+            memoryCache.set(targetChar, data);
+            return data;
+          }
+        }
+      } catch {
+        // Non-fatal Tier 2 cache check failure, proceed to Tier 3
+      }
+    }
+
+    // Tier 3: Local Next.js Static Bundled Data (/public/data/hanzi/[char].json)
+    try {
+      const localUrl = `/data/hanzi/${encodeURIComponent(targetChar)}.json`;
+      const localRes = await fetch(localUrl);
+      if (localRes.ok) {
+        const data = (await localRes.json()) as CharacterJson;
         if (isValidCharacterJson(data)) {
           memoryCache.set(targetChar, data);
-          if (onLoad) onLoad(data);
+          saveToCacheStorage(targetChar, data).catch(() => {});
           return data;
         }
       }
     } catch {
-      // Non-fatal Tier 2 cache check failure, proceed to Tier 3
+      // Local fetch failed (e.g., file not found or offline mode), fallback to Tier 4
     }
-  }
 
-  // Tier 3: Local Next.js Static Bundled Data (/public/data/hanzi/[char].json)
-  try {
-    const localUrl = `/data/hanzi/${encodeURIComponent(targetChar)}.json`;
-    const localRes = await fetch(localUrl);
-    if (localRes.ok) {
-      const data = (await localRes.json()) as CharacterJson;
-      if (isValidCharacterJson(data)) {
-        memoryCache.set(targetChar, data);
-        await saveToCacheStorage(targetChar, data);
-        if (onLoad) onLoad(data);
-        return data;
-      }
-    }
-  } catch {
-    // Local fetch failed (e.g., file not found or offline mode), fallback to Tier 4
-  }
+    // Tier 4: Public CDN Fallbacks (jsDelivr -> unpkg)
+    const cdnUrls = [
+      `https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/${encodeURIComponent(targetChar)}.json`,
+      `https://unpkg.com/hanzi-writer-data@2.0.1/${encodeURIComponent(targetChar)}.json`,
+    ];
 
-  // Tier 4: Public CDN Fallbacks (jsDelivr -> unpkg)
-  const cdnUrls = [
-    `https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/${encodeURIComponent(targetChar)}.json`,
-    `https://unpkg.com/hanzi-writer-data@2.0.1/${encodeURIComponent(targetChar)}.json`,
-  ];
-
-  for (const url of cdnUrls) {
-    try {
+    for (const url of cdnUrls) {
       const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
       const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
+      try {
+        const res = await fetch(url, {
+          signal: controller?.signal,
+        });
 
-      const res = await fetch(url, {
-        signal: controller?.signal,
-      });
-
-      if (timeoutId) clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = (await res.json()) as CharacterJson;
-        if (isValidCharacterJson(data)) {
-          memoryCache.set(targetChar, data);
-          await saveToCacheStorage(targetChar, data);
-          if (onLoad) onLoad(data);
-          return data;
+        if (res.ok) {
+          const data = (await res.json()) as CharacterJson;
+          if (isValidCharacterJson(data)) {
+            memoryCache.set(targetChar, data);
+            saveToCacheStorage(targetChar, data).catch(() => {});
+            return data;
+          }
+        }
+      } catch {
+        // Continue to next CDN url
+        continue;
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
         }
       }
-    } catch {
-      // Continue to next CDN url
-      continue;
     }
-  }
 
-  const finalError = new Error(
-    `Không thể tải dữ liệu nét chữ Hán cho '${targetChar}' (Đã thử Bộ nhớ đệm, Local và CDN).`
-  );
-  if (onError) onError(finalError);
-  throw finalError;
+    throw new Error(
+      `Không thể tải dữ liệu nét chữ Hán cho '${targetChar}' (Đã thử Bộ nhớ đệm, Local và CDN).`
+    );
+  })();
+
+  inFlightRequests.set(targetChar, loadPromise);
+
+  try {
+    const data = await loadPromise;
+    if (onLoad) onLoad(data);
+    return data;
+  } catch (err: any) {
+    if (onError) onError(err);
+    throw err;
+  } finally {
+    inFlightRequests.delete(targetChar);
+  }
 };
 
 /**
@@ -197,6 +223,7 @@ export function setMemoryCharData(char: string, data: CharacterJson): void {
  */
 export function clearMemoryCache(): void {
   memoryCache.clear();
+  inFlightRequests.clear();
 }
 
 /**

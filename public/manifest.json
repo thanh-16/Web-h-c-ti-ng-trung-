@@ -1,0 +1,31 @@
+{
+  "name": "HanziVibe - 汉字韵",
+  "short_name": "HanziVibe",
+  "description": "Nền tảng học tiếng Trung công nghệ cao: phân tích cao độ F0, viết chữ Hán và đòn bẩy Hán - Việt",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B0F17",
+  "theme_color": "#0B0F17",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["education", "language", "productivity"]
+}

@@ -133,19 +133,79 @@ export function decodePdfHexString(hex: string, cmap?: Map<string, string>): str
 }
 
 /**
- * Safely decompresses a raw byte stream using native DecompressionStream API
+ * Hardened Security Limits against Zip-Bombs & Memory Exhaustion (DoS)
  */
-export async function decompressFlate(compressedBytes: Uint8Array): Promise<Uint8Array | null> {
+export const MAX_DECOMPRESSED_STREAM_BYTES = 10 * 1024 * 1024; // 10 MB per FlateDecode stream
+export const MAX_TOTAL_PDF_EXTRACTED_BYTES = 50 * 1024 * 1024; // 50 MB total extracted text per document
+
+/**
+ * Reads a ReadableStream with a strict byte limit to prevent Zip-Bomb memory exhaustion.
+ */
+async function readStreamWithByteLimit(
+  stream: ReadableStream<Uint8Array>,
+  maxBytes: number
+): Promise<Uint8Array | null> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        totalBytes += value.length;
+        if (totalBytes > maxBytes) {
+          console.warn(
+            `[pdfTextExtractor] Security: Decompressed stream exceeded ${maxBytes} bytes limit (potential zip-bomb). Aborting decompression.`
+          );
+          await reader.cancel('Stream exceeded security limit');
+          return null;
+        }
+        chunks.push(value);
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  const result = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
+
+function createByteStream(bytes: Uint8Array): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
+
+/**
+ * Safely decompresses a raw byte stream using native DecompressionStream API
+ * with strict byte limit to neutralize Zip-Bomb / Decompression Bomb attacks.
+ */
+export async function decompressFlate(
+  compressedBytes: Uint8Array,
+  maxBytes: number = MAX_DECOMPRESSED_STREAM_BYTES
+): Promise<Uint8Array | null> {
   if (typeof DecompressionStream === 'undefined') {
     return null;
   }
 
   // 1. Try standard zlib/deflate
   try {
-    const blob = new Blob([compressedBytes.buffer as ArrayBuffer]);
-    const stream = blob.stream().pipeThrough(new DecompressionStream('deflate'));
-    const buffer = await new Response(stream).arrayBuffer();
-    return new Uint8Array(buffer);
+    const stream = (createByteStream(compressedBytes) as unknown as ReadableStream<BufferSource>).pipeThrough(
+      new DecompressionStream('deflate')
+    );
+    const buffer = await readStreamWithByteLimit(stream as unknown as ReadableStream<Uint8Array>, maxBytes);
+    if (buffer) return buffer;
   } catch {
     // If standard deflate header fails (e.g. raw deflate without zlib header), try deflate-raw
   }
@@ -157,10 +217,11 @@ export async function decompressFlate(compressedBytes: Uint8Array): Promise<Uint
         ? compressedBytes.slice(2)
         : compressedBytes;
 
-    const blobRaw = new Blob([rawData.buffer as ArrayBuffer]);
-    const streamRaw = blobRaw.stream().pipeThrough(new DecompressionStream('deflate-raw'));
-    const buffer = await new Response(streamRaw).arrayBuffer();
-    return new Uint8Array(buffer);
+    const streamRaw = (createByteStream(rawData) as unknown as ReadableStream<BufferSource>).pipeThrough(
+      new DecompressionStream('deflate-raw')
+    );
+    const buffer = await readStreamWithByteLimit(streamRaw as unknown as ReadableStream<Uint8Array>, maxBytes);
+    return buffer;
   } catch {
     // Return null if decompression fails
   }
@@ -344,8 +405,16 @@ export async function extractTextFromPdf(
   }
 
   const pagesExtracted: string[] = [];
+  let totalExtractedBytes = 0;
 
   for (const streamInfo of streamIndices) {
+    if (totalExtractedBytes >= MAX_TOTAL_PDF_EXTRACTED_BYTES) {
+      console.warn(
+        `[pdfTextExtractor] Security: Total extracted bytes reached safe document limit (${MAX_TOTAL_PDF_EXTRACTED_BYTES} bytes). Halting further stream parsing.`
+      );
+      break;
+    }
+
     const rawStreamBytes = bytes.slice(streamInfo.start, streamInfo.end);
     let streamText = '';
 
@@ -362,6 +431,7 @@ export async function extractTextFromPdf(
       const extracted = extractTextFromContentStream(streamText, combinedCMap);
       if (extracted.trim().length > 0) {
         pagesExtracted.push(extracted.trim());
+        totalExtractedBytes += extracted.length;
       }
     }
   }

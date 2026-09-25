@@ -25,6 +25,7 @@ import {
   BookmarkCheck,
 } from 'lucide-react';
 import { annotationService } from '@/services/annotationService';
+import { renderSafeMarkdownInline } from '@/utils/security';
 
 interface CircleToSearchModalProps {
   isOpen: boolean;
@@ -461,11 +462,7 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
                         <span className="text-cyber-cyan mt-1">•</span>
                         <span
                           dangerouslySetInnerHTML={{
-                            __html: trimmed
-                              .substring(2)
-                              .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-                              .replace(/\*(.*?)\*/g, '<em class="text-cyber-cyan font-mono">$1</em>')
-                              .replace(/`(.*?)`/g, '<code class="px-1 py-0.5 rounded bg-obsidian-950 font-mono text-amber-400 border border-slate-700 text-xs">$1</code>'),
+                            __html: renderSafeMarkdownInline(trimmed.substring(2)),
                           }}
                         />
                       </div>
@@ -477,9 +474,7 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
                         key={idx}
                         className="p-3 my-2 rounded-xl bg-obsidian-900 border-l-4 border-amber-400 text-slate-300 italic"
                         dangerouslySetInnerHTML={{
-                          __html: trimmed
-                            .substring(2)
-                            .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>'),
+                          __html: renderSafeMarkdownInline(trimmed.substring(2)),
                         }}
                       />
                     );
@@ -489,10 +484,7 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
                     <p
                       key={idx}
                       dangerouslySetInnerHTML={{
-                        __html: trimmed
-                          .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-                          .replace(/\*(.*?)\*/g, '<em class="text-cyber-cyan font-mono">$1</em>')
-                          .replace(/`(.*?)`/g, '<code class="px-1 py-0.5 rounded bg-obsidian-950 font-mono text-amber-400 border border-slate-700 text-xs">$1</code>'),
+                        __html: renderSafeMarkdownInline(trimmed),
                       }}
                     />
                   );

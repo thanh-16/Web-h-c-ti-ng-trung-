@@ -76,12 +76,16 @@ export class ProgressService {
    * Loads profile from localStorage, with fallback to default in-memory profile
    */
   private loadFromStorage(): UserProfile {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return createDefaultProfile();
-    }
-
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
+      if (typeof window === 'undefined') {
+        return createDefaultProfile();
+      }
+      const storage = window.localStorage;
+      if (!storage) {
+        return createDefaultProfile();
+      }
+
+      const data = storage.getItem(STORAGE_KEY);
       if (!data) {
         const defaultProfile = createDefaultProfile();
         this.saveToStorage(defaultProfile);
@@ -108,7 +112,6 @@ export class ProgressService {
       };
     } catch {
       const fallback = createDefaultProfile();
-      this.saveToStorage(fallback);
       return fallback;
     }
   }
@@ -118,12 +121,15 @@ export class ProgressService {
    */
   private saveToStorage(profile: UserProfile): void {
     this.currentProfile = profile;
-    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-      } catch (err) {
-        console.warn('[ProgressService] Failed to save to localStorage:', err);
+    try {
+      if (typeof window !== 'undefined') {
+        const storage = window.localStorage;
+        if (storage) {
+          storage.setItem(STORAGE_KEY, JSON.stringify(profile));
+        }
       }
+    } catch (err) {
+      console.warn('[ProgressService] Failed to save to localStorage (QuotaExceededError or SecurityError):', err);
     }
     this.notifyListeners();
   }

@@ -29,32 +29,40 @@ export class AnnotationService {
   }
 
   private loadFromStorage(): DocumentAnnotation[] {
-    if (typeof window === 'undefined' || !window.localStorage) {
-      return [];
-    }
-
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      if (typeof window === 'undefined') {
+        return [];
+      }
+      const storage = window.localStorage;
+      if (!storage) return [];
+      const raw = storage.getItem(STORAGE_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
-      console.warn('[AnnotationService] Failed to read from localStorage:', e);
+      console.warn('[AnnotationService] Failed to read from localStorage (SecurityError or disabled storage):', e);
       this.isStorageAvailable = false;
       return [];
     }
   }
 
   private saveToStorage(): void {
-    if (typeof window === 'undefined' || !window.localStorage) {
-      return;
-    }
-
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.inMemoryCache));
+      if (typeof window === 'undefined') {
+        return;
+      }
+      const storage = window.localStorage;
+      if (!storage) return;
+
+      // Keep cache bounded to prevent extreme memory growth (max 500 items)
+      if (this.inMemoryCache.length > 500) {
+        this.inMemoryCache = this.inMemoryCache.slice(0, 500);
+      }
+
+      storage.setItem(STORAGE_KEY, JSON.stringify(this.inMemoryCache));
       this.isStorageAvailable = true;
     } catch (e) {
-      console.warn('[AnnotationService] Storage write failed, keeping in-memory state:', e);
+      console.warn('[AnnotationService] Storage write failed (QuotaExceededError or SecurityError), keeping in-memory state:', e);
       this.isStorageAvailable = false;
     }
   }

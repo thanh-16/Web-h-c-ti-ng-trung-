@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   AlertCircle,
 } from 'lucide-react';
+import { renderSafeMarkdownInline } from '@/utils/security';
 
 interface GeminiAiModalProps {
   isOpen: boolean;
@@ -62,10 +63,7 @@ function renderMarkdownContent(content: string) {
               <span className="text-cyber-cyan mt-1">•</span>
               <span
                 dangerouslySetInnerHTML={{
-                  __html: itemText
-                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em class="text-cyber-cyan font-mono">$1</em>')
-                    .replace(/`(.*?)`/g, '<code class="px-1 py-0.5 rounded bg-obsidian-950 font-mono text-amber-400 border border-slate-700 text-xs">$1</code>'),
+                  __html: renderSafeMarkdownInline(itemText),
                 }}
               />
             </div>
@@ -79,7 +77,7 @@ function renderMarkdownContent(content: string) {
               key={idx}
               className="p-3 my-2 rounded-xl bg-obsidian-950/80 border-l-4 border-amber-400 text-slate-300 italic"
               dangerouslySetInnerHTML={{
-                __html: quoteText.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>'),
+                __html: renderSafeMarkdownInline(quoteText),
               }}
             />
           );
@@ -93,10 +91,7 @@ function renderMarkdownContent(content: string) {
           <p
             key={idx}
             dangerouslySetInnerHTML={{
-              __html: trimmed
-                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em class="text-cyber-cyan font-mono">$1</em>')
-                .replace(/`(.*?)`/g, '<code class="px-1 py-0.5 rounded bg-obsidian-950 font-mono text-amber-400 border border-slate-700 text-xs">$1</code>'),
+              __html: renderSafeMarkdownInline(trimmed),
             }}
           />
         );

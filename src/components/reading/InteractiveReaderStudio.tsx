@@ -1,8 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { CircleToSearchOverlay, CircleToSearchModal } from '@/components/ai';
 import { SpeechService } from '@/services/speechService';
+import {
+  extractTextFromPdf,
+  extractTextFromTxt,
+  PdfDocumentResult,
+  PdfPageResult,
+} from '@/services/pdfTextExtractor';
 import { HskWord } from '@/types/hsk';
 import {
   BookOpen,
@@ -13,7 +19,14 @@ import {
   Layers,
   ArrowRight,
   FileText,
+  Upload,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  FileUp,
   RotateCcw,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface ReadingPassage {
@@ -56,6 +69,8 @@ const SAMPLE_PASSAGES: ReadingPassage[] = [
   },
 ];
 
+type ReaderSourceMode = 'samples' | 'pdf' | 'custom';
+
 interface InteractiveReaderStudioProps {
   onPracticeCharacter?: (char: string, matchedWord?: HskWord) => void;
   className?: string;
@@ -65,22 +80,50 @@ export const InteractiveReaderStudio: React.FC<InteractiveReaderStudioProps> = (
   onPracticeCharacter,
   className = '',
 }) => {
+  const [sourceMode, setSourceMode] = useState<ReaderSourceMode>('samples');
   const [selectedPassageId, setSelectedPassageId] = useState<string>(SAMPLE_PASSAGES[0].id);
+
+  // Custom text input
   const [customText, setCustomText] = useState<string>('');
-  const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
+
+  // PDF Document state
+  const [pdfDoc, setPdfDoc] = useState<PdfDocumentResult | null>(null);
+  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
+  const [isParsingPdf, setIsParsingPdf] = useState<boolean>(false);
+  const [pdfParseError, setPdfParseError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Audio state
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
 
   // Circle to Search Modal state
   const [isCircleModalOpen, setIsCircleModalOpen] = useState<boolean>(false);
   const [selectedWordToQuery, setSelectedWordToQuery] = useState<string>('');
 
+  // Determine active text, pinyin and annotations based on active mode
   const currentPassage =
     SAMPLE_PASSAGES.find((p) => p.id === selectedPassageId) || SAMPLE_PASSAGES[0];
 
-  const activeText = isCustomMode && customText.trim() ? customText.trim() : currentPassage.chinese;
-  const activePinyin = isCustomMode ? undefined : currentPassage.pinyin;
-  const activeSinoViet = isCustomMode ? undefined : currentPassage.sinoVietnamese;
-  const activeVietnamese = isCustomMode ? undefined : currentPassage.vietnamese;
+  let activeText = '';
+  let activePinyin: string | undefined;
+  let activeSinoViet: string | undefined;
+  let activeVietnamese: string | undefined;
+
+  if (sourceMode === 'samples') {
+    activeText = currentPassage.chinese;
+    activePinyin = currentPassage.pinyin;
+    activeSinoViet = currentPassage.sinoVietnamese;
+    activeVietnamese = currentPassage.vietnamese;
+  } else if (sourceMode === 'custom') {
+    activeText = customText.trim() || 'Vui lòng nhập hoặc dán văn bản tiếng Trung cần đọc ở ô bên trên.';
+  } else if (sourceMode === 'pdf') {
+    if (pdfDoc && pdfDoc.pages.length > 0) {
+      const activePage = pdfDoc.pages[currentPageIndex] || pdfDoc.pages[0];
+      activeText = activePage.text;
+    } else {
+      activeText = 'Chưa có tệp PDF nào được tải lên. Hãy chọn một tệp PDF giáo trình tiếng Trung để bắt đầu học đọc!';
+    }
+  }
 
   // Handle word circled by user
   const handleWordCircled = (word: string) => {
@@ -102,9 +145,57 @@ export const InteractiveReaderStudio: React.FC<InteractiveReaderStudioProps> = (
     }
   };
 
+  // Handle PDF / Text File Upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    setIsParsingPdf(true);
+    setPdfParseError(null);
+
+    try {
+      const fileNameLower = file.name.toLowerCase();
+
+      if (fileNameLower.endsWith('.pdf')) {
+        const buffer = await file.arrayBuffer();
+        const docResult = await extractTextFromPdf(buffer, file.name);
+
+        if (docResult.pages.length === 0 || docResult.totalChineseChars === 0) {
+          setPdfParseError(
+            'Tài liệu PDF này không chứa văn bản text tiếng Trung rõ ràng (có thể là file scan dạng ảnh).'
+          );
+        }
+
+        setPdfDoc(docResult);
+        setCurrentPageIndex(0);
+        setSourceMode('pdf');
+      } else if (fileNameLower.endsWith('.txt') || fileNameLower.endsWith('.md')) {
+        const textContent = await file.text();
+        const docResult = extractTextFromTxt(textContent, file.name);
+
+        setPdfDoc(docResult);
+        setCurrentPageIndex(0);
+        setSourceMode('pdf');
+      } else {
+        setPdfParseError('Định dạng tệp không được hỗ trợ. Vui lòng chọn tệp .pdf, .txt hoặc .md.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Failed to parse document:', err);
+      setPdfParseError(`Lỗi giải mã tệp: ${msg}`);
+    } finally {
+      setIsParsingPdf(false);
+      // Reset input value so same file can be re-uploaded if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className={`w-full flex flex-col gap-6 ${className}`}>
-      {/* Header Selector & Custom Mode Toggle */}
+      {/* 1. Header Selector & Source Mode Switcher */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-3xl bg-obsidian-900 border border-slate-800 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-cyber-cyan/15 border border-cyber-cyan/30 flex items-center justify-center text-cyber-cyan shadow-sm">
@@ -112,47 +203,76 @@ export const InteractiveReaderStudio: React.FC<InteractiveReaderStudioProps> = (
           </div>
           <div>
             <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
-              <span>Đọc Đoạn Văn &amp; Khoanh Chữ Hỏi AI</span>
+              <span>Đọc Tài Liệu &amp; Khoanh Chữ Hỏi AI</span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan font-bold">
-                Circle to Search
+                PDF &amp; Text Reader
               </span>
             </h3>
             <p className="text-xs text-slate-400">
-              Chạm hoặc dùng ngón tay/Apple Pencil khoanh tròn vào bất kỳ từ nào bạn chưa biết để AI phân tích tức thì!
+              Tải tệp PDF tài liệu lên hoặc chọn bài đọc để tra cứu và hỏi AI mọi chữ bạn chưa biết!
             </p>
           </div>
         </div>
 
-        {/* Buttons */}
+        {/* Action Controls */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Audio TTS Button */}
           <button
             type="button"
             onClick={handlePlayFullAudio}
-            disabled={isPlayingAudio}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all shadow-sm active:scale-95"
-            title="Nghe toàn bộ đoạn văn bằng giọng đọc bản xứ"
+            disabled={isPlayingAudio || !activeText}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+            title="Nghe toàn bộ văn bản bằng giọng đọc bản xứ"
           >
             <Volume2 className={`w-4 h-4 text-cyber-cyan ${isPlayingAudio ? 'animate-bounce text-emerald-400' : ''}`} />
-            <span>{isPlayingAudio ? 'Đang đọc...' : 'Nghe cả bài'}</span>
+            <span>{isPlayingAudio ? 'Đang đọc...' : 'Nghe văn bản'}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setIsCustomMode((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
-              isCustomMode
-                ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                : 'bg-obsidian-950 border-slate-800 text-slate-300 hover:text-white'
-            }`}
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>{isCustomMode ? 'Bài mẫu tuyển chọn' : 'Dán văn bản tự chọn'}</span>
-          </button>
+          {/* Mode Switcher Tabs */}
+          <div className="flex items-center bg-obsidian-950 p-1 rounded-xl border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setSourceMode('samples')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                sourceMode === 'samples'
+                  ? 'bg-cyber-cyan text-obsidian-950 font-extrabold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Bài mẫu HSK
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSourceMode('pdf')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                sourceMode === 'pdf'
+                  ? 'bg-cyber-cyan text-obsidian-950 font-extrabold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileUp className="w-3.5 h-3.5" />
+              <span>Tài liệu PDF</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSourceMode('custom')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                sourceMode === 'custom'
+                  ? 'bg-cyber-cyan text-obsidian-950 font-extrabold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Dán văn bản</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Mode 1: Pre-loaded Curated Passages Selector */}
-      {!isCustomMode && (
+      {/* 2. Mode 1: Curated HSK Sample Passages Selector */}
+      {sourceMode === 'samples' && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {SAMPLE_PASSAGES.map((p) => {
             const isSelected = p.id === selectedPassageId;
@@ -183,12 +303,119 @@ export const InteractiveReaderStudio: React.FC<InteractiveReaderStudioProps> = (
         </div>
       )}
 
-      {/* Mode 2: Custom Text Input */}
-      {isCustomMode && (
+      {/* 3. Mode 2: PDF Document Uploader & Page Navigator */}
+      {sourceMode === 'pdf' && (
+        <div className="flex flex-col gap-4">
+          {/* Upload Dropzone Bar */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-obsidian-900 border border-dashed border-slate-700/80 hover:border-cyber-cyan/60 transition-colors flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+            <div className="flex items-center gap-3.5 text-center sm:text-left">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <FileUp className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white flex items-center justify-center sm:justify-start gap-2">
+                  <span>Tải Lên Tệp PDF / TXT / Markdown</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
+                    100% Client-Side Private
+                  </span>
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Tài liệu được xử lý trực tiếp trên thiết bị của bạn, không tải lên server ngoài.
+                </p>
+              </div>
+            </div>
+
+            {/* Hidden Input & Trigger Button */}
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.txt,.md"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="pdf-upload-input"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isParsingPdf}
+                className="px-4 py-2.5 rounded-2xl bg-cyber-cyan text-obsidian-950 font-bold text-xs flex items-center gap-2 hover:bg-cyan-300 transition-all shadow-md shadow-cyan-950/40 active:scale-95 disabled:opacity-50"
+              >
+                {isParsingPdf ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang giải mã PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    <span>Chọn tệp từ máy / iPad</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Error Message if Parsing Failed */}
+          {pdfParseError && (
+            <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{pdfParseError}</span>
+            </div>
+          )}
+
+          {/* Document Metadata & Pagination Bar */}
+          {pdfDoc && (
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-obsidian-950/70 border border-slate-800 shadow-md flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-cyber-cyan" />
+                <span className="text-xs font-bold text-white max-w-[200px] sm:max-w-xs truncate">
+                  {pdfDoc.fileName}
+                </span>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                  {pdfDoc.totalChineseChars} chữ Hán
+                </span>
+              </div>
+
+              {/* Page Controls */}
+              {pdfDoc.totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPageIndex((prev) => Math.max(0, prev - 1))}
+                    disabled={currentPageIndex === 0}
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors disabled:opacity-40"
+                    title="Trang trước"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <span className="text-xs font-mono font-bold text-cyber-cyan px-2">
+                    Trang {currentPageIndex + 1} / {pdfDoc.totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPageIndex((prev) => Math.min(pdfDoc.totalPages - 1, prev + 1))}
+                    disabled={currentPageIndex >= pdfDoc.totalPages - 1}
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors disabled:opacity-40"
+                    title="Trang sau"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 4. Mode 3: Custom Text Paste Input */}
+      {sourceMode === 'custom' && (
         <div className="p-4 sm:p-5 rounded-3xl bg-obsidian-900 border border-slate-800 shadow-xl space-y-3">
           <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
             <FileText className="w-3.5 h-3.5 text-cyber-cyan" />
-            <span>Nhập hoặc dán đoạn văn tiếng Trung của bạn:</span>
+            <span>Nhập hoặc dán đoạn văn tiếng Trung bạn muốn học:</span>
           </label>
           <textarea
             value={customText}
@@ -200,7 +427,7 @@ export const InteractiveReaderStudio: React.FC<InteractiveReaderStudioProps> = (
         </div>
       )}
 
-      {/* Main Interactive Circle-to-Search Canvas Display */}
+      {/* 5. Main Interactive Circle-to-Search Canvas Display */}
       <CircleToSearchOverlay
         sentenceText={activeText}
         pinyinText={activePinyin}
@@ -210,7 +437,7 @@ export const InteractiveReaderStudio: React.FC<InteractiveReaderStudioProps> = (
         className="w-full"
       />
 
-      {/* Floating Circle-to-Search Modal Dialog */}
+      {/* 6. Floating Circle-to-Search Modal Dialog */}
       <CircleToSearchModal
         isOpen={isCircleModalOpen}
         onClose={() => setIsCircleModalOpen(false)}

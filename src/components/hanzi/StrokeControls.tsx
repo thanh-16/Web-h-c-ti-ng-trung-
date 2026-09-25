@@ -80,31 +80,31 @@ export const StrokeControls: React.FC<StrokeControlsProps> = ({
 
   return (
     <div
-      className={`w-full flex flex-col gap-3 p-3.5 rounded-2xl bg-obsidian-900/90 border border-slate-800 backdrop-blur-sm select-none ${className}`}
+      className={`w-full flex flex-col gap-3 p-4 rounded-3xl bg-white/90 dark:bg-obsidian-900/90 border border-stone-200/90 dark:border-slate-800 shadow-md backdrop-blur-md select-none ${className}`}
       data-testid="stroke-controls"
     >
-      {/* Primary Actions Row */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Primary Actions Row (Chunky Tactile 3D Buttons) */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
         {/* Practice/Quiz Mode Toggle Button */}
         <button
           type="button"
           onClick={handleQuizClick}
           disabled={isLoading}
           data-testid="btn-quiz-toggle"
-          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm ${
+          className={`flex-1 min-w-[150px] btn-tactile py-2.5 px-4 text-xs font-black shadow-sm gap-2 ${
             isQuiz
-              ? 'bg-cyber-cyan text-obsidian-950 shadow-cyber-cyan/30 ring-2 ring-cyber-cyan/50 font-bold'
-              : 'bg-cyber-cyan/15 hover:bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/30'
+              ? 'btn-tactile-coral text-white'
+              : 'btn-tactile-emerald text-white'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {isQuiz ? (
             <>
-              <XCircle className="w-4 h-4 text-obsidian-950" />
+              <XCircle className="w-4 h-4 text-white" />
               <span>Dừng luyện viết</span>
             </>
           ) : (
             <>
-              <Edit3 className="w-4 h-4" />
+              <Edit3 className="w-4 h-4 text-white" />
               <span>Luyện viết cảm ứng</span>
             </>
           )}
@@ -116,29 +116,25 @@ export const StrokeControls: React.FC<StrokeControlsProps> = ({
           onClick={handleAnimationClick}
           disabled={isLoading || isQuiz}
           data-testid="btn-animate"
-          className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all ${
-            isAnimating
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
-              : isPaused
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+          className={`flex-1 min-w-[140px] btn-tactile btn-tactile-amber py-2.5 px-3.5 text-xs font-black text-white gap-2 shadow-sm ${
+            isAnimating ? 'animate-pulse' : ''
           } disabled:opacity-40 disabled:cursor-not-allowed`}
-          title={isAnimating ? 'Tạm dừng hoạt họa' : isPaused ? 'Tiếp tục' : 'Thị phạm thứ tự nét bút thuận'}
+          title={isAnimating ? 'Tạm dừng hoạt họa' : isPaused ? 'Tiếp tục' : 'Xem hoạt họa thứ tự nét chuẩn'}
         >
           {isAnimating ? (
             <>
-              <Pause className="w-4 h-4 text-amber-400" />
-              <span className="hidden sm:inline">Tạm dừng</span>
+              <Pause className="w-4 h-4 text-white" />
+              <span>Tạm Dừng</span>
             </>
           ) : isPaused ? (
             <>
-              <Play className="w-4 h-4 text-amber-400" />
-              <span className="hidden sm:inline">Tiếp tục</span>
+              <Play className="w-4 h-4 text-white" />
+              <span>Tiếp Tục</span>
             </>
           ) : (
             <>
-              <Play className="w-4 h-4 text-cyber-cyan" />
-              <span>Thị phạm nét</span>
+              <Play className="w-4 h-4 text-white" />
+              <span>▶️ Xem Thứ Tự Nét</span>
             </>
           )}
         </button>
@@ -149,11 +145,11 @@ export const StrokeControls: React.FC<StrokeControlsProps> = ({
           onClick={onShowHint}
           disabled={isLoading}
           data-testid="btn-hint"
-          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-medium text-sm transition-all disabled:opacity-40"
-          title="Nhấp nháy gợi ý nét tiếp theo"
+          className="btn-tactile btn-tactile-cyan py-2.5 px-3.5 text-xs font-black text-white gap-1.5 shadow-sm disabled:opacity-40"
+          title="Nhấp nháy gợi ý nét tiếp theo cần viết"
         >
-          <Lightbulb className="w-4 h-4 text-amber-400" />
-          <span className="hidden sm:inline">Gợi ý nét</span>
+          <Lightbulb className="w-4 h-4 text-white" />
+          <span>💡 Gợi Ý Nét</span>
         </button>
 
         {/* Reset / Show Full Character */}
@@ -162,11 +158,11 @@ export const StrokeControls: React.FC<StrokeControlsProps> = ({
           onClick={onReset}
           disabled={isLoading}
           data-testid="btn-reset"
-          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium text-sm transition-all disabled:opacity-40"
-          title="Xem lại chữ mẫu hoàn chỉnh"
+          className="px-3.5 py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-stone-700 dark:text-slate-300 border border-stone-200 dark:border-slate-700 font-bold text-xs transition-all active:scale-95 disabled:opacity-40 flex items-center gap-1.5 shadow-sm"
+          title="Xóa viết lại từ đầu"
         >
-          <RotateCcw className="w-4 h-4 text-slate-400" />
-          <span className="hidden md:inline">Chữ mẫu</span>
+          <RotateCcw className="w-4 h-4 text-stone-500 dark:text-slate-400" />
+          <span className="hidden sm:inline">Viết Lại</span>
         </button>
 
         {/* Audio Mute Toggle */}
@@ -175,20 +171,26 @@ export const StrokeControls: React.FC<StrokeControlsProps> = ({
             type="button"
             onClick={onToggleMute}
             data-testid="btn-mute-toggle"
-            className={`p-2.5 rounded-xl border transition-all ${
+            className={`p-2.5 rounded-2xl border transition-all active:scale-95 shadow-sm ${
               isMuted
-                ? 'bg-rose-950/30 border-rose-800/40 text-rose-400'
-                : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-500'
+                : 'bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 border-stone-200 dark:border-slate-700 text-stone-700 dark:text-slate-300'
             }`}
-            title={isMuted ? 'Bật âm thanh phản hồi' : 'Tắt âm thanh phản hồi'}
+            title={isMuted ? 'Bật âm thanh bút viết' : 'Tắt âm thanh'}
           >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
         )}
       </div>
 
+      {/* Pedagogical Stroke Rule Tip */}
+      <div className="pt-2 border-t border-stone-200/80 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-stone-500 dark:text-slate-400 font-medium">
+        <span>📜 <strong>Quy tắc bút thuận:</strong> Trên trước dưới sau • Trái trước phải sau • Ngoài trước trong sau</span>
+        <span className="hidden md:inline font-mono text-amber-600 dark:text-amber-400">Chuẩn Khải Thư</span>
+      </div>
+
       {/* Secondary Controls: Speed Selector */}
-      <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/80 text-xs">
+      <div className="flex items-center justify-between pt-2.5 border-t border-stone-200/80 dark:border-slate-800/80 text-xs">
         <div className="flex items-center gap-1.5 text-slate-400 font-medium">
           <Gauge className="w-3.5 h-3.5 text-cyber-cyan" />
           <span>Tốc độ thị phạm:</span>

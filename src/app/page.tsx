@@ -16,6 +16,10 @@ import { TimeAttackBattle } from '@/components/battle';
 import { srsService } from '@/services/srsService';
 import { progressService } from '@/services/progressService';
 import { Tilt3DCard, ParallaxCalligraphyCanvas } from '@/components/ui';
+import { RoadmapJourney } from '@/components/roadmap';
+import { VisualVocabStudio } from '@/components/vocab';
+import { roadmapService } from '@/services/roadmapService';
+import { RoadmapLesson } from '@/types/hsk';
 import {
   Layers,
   Edit3,
@@ -32,17 +36,30 @@ import {
   Flame,
   Trophy,
   CheckCircle2,
+  Compass,
+  ArrowRight,
 } from 'lucide-react';
 
-type StudioTab = 'flashcard' | 'canvas' | 'reader' | 'pitch' | 'dictionary' | 'battle';
+type StudioTab = 'roadmap' | 'vocab' | 'canvas' | 'reader' | 'pitch' | 'battle';
 
 export default function HomePage() {
   const [selectedWord, setSelectedWord] = useState<HskWord>(HSK_CURRICULUM[0]);
-  const [activeTab, setActiveTab] = useState<StudioTab>('flashcard');
+  const [activeTab, setActiveTab] = useState<StudioTab>('roadmap');
+  const [currentLesson, setCurrentLesson] = useState<RoadmapLesson | null>(null);
   const [canvasSubMode, setCanvasSubMode] = useState<'single' | 'sentence'>('single');
   const [selectedCharIndex, setSelectedCharIndex] = useState(0);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [srsDueCount, setSrsDueCount] = useState<number>(0);
+
+  // Initialize active lesson from roadmap
+  React.useEffect(() => {
+    const active = roadmapService.getCurrentActiveLesson();
+    setCurrentLesson(active);
+    const words = HSK_CURRICULUM.filter((w) => active.wordIds.includes(w.id));
+    if (words.length > 0) {
+      setSelectedWord(words[0]);
+    }
+  }, []);
 
   // Subscribe to SRS due cards
   React.useEffect(() => {
@@ -84,6 +101,35 @@ export default function HomePage() {
     setTimeout(() => setPlayingTone(null), 700);
   };
 
+  const handleSelectLesson = (lesson: RoadmapLesson) => {
+    setCurrentLesson(lesson);
+    const words = HSK_CURRICULUM.filter((w) => lesson.wordIds.includes(w.id));
+    if (words.length > 0) {
+      setSelectedWord(words[0]);
+      setSelectedCharIndex(0);
+    }
+    setActiveTab('vocab');
+  };
+
+  const handleCompleteLesson = () => {
+    if (currentLesson) {
+      roadmapService.completeLesson(currentLesson.id, 3, 100);
+      progressService.recordSession({
+        timeSpentSeconds: 180,
+        wordsReviewed: currentLesson.wordIds.length,
+        tonesPracticed: 2,
+        charactersWritten: 1,
+        accuracyRate: 100,
+        xpEarned: 50,
+      });
+    }
+    setActiveTab('roadmap');
+  };
+
+  const activeLessonWords = currentLesson
+    ? HSK_CURRICULUM.filter((w) => currentLesson.wordIds.includes(w.id))
+    : HSK_CURRICULUM;
+
   const filteredCurriculum = HSK_CURRICULUM.filter((w) => {
     const q = dictionarySearch.toLowerCase().trim();
     if (!q) return true;
@@ -109,249 +155,41 @@ export default function HomePage() {
       />
 
       {/* Main Studio Container */}
-      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 flex flex-col">
-        {/* 1. Gamified Quest & Motivation Hero Dashboard with 3D Holographic Seal */}
-        <section className="mb-6">
-          <div className="p-5 sm:p-7 rounded-3xl bg-white/80 dark:bg-obsidian-900/60 border border-stone-200/90 dark:border-amber-500/30 relative overflow-hidden shadow-xl backdrop-blur-md transition-all">
-            {/* Subtle Calligraphic Background Motif */}
-            <div className="absolute right-4 -bottom-6 text-9xl font-serif font-black text-amber-500/5 dark:text-amber-500/5 pointer-events-none select-none">
-              学
-            </div>
-
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="max-w-xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs font-black mb-3 shadow-sm">
-                  <Flame className="w-3.5 h-3.5 fill-amber-500 text-orange-500 animate-flame-glow" />
-                  <span>Cùng Chinh Phục Tiếng Trung Mỗi Ngày!</span>
-                </div>
-
-                <h2 className="text-xl sm:text-3xl font-black text-stone-900 dark:text-white tracking-tight leading-tight">
-                  Chào bạn! 👋 Hôm nay cùng giữ chuỗi lửa <span className="text-amber-500 dark:text-amber-400">Streak {progressService.getProfile().streakDays} Ngày</span> nhé!
-                </h2>
-
-                <p className="text-xs sm:text-sm text-stone-600 dark:text-slate-300 mt-2 leading-relaxed">
-                  Luyện phát âm 4 thanh điệu chuẩn như người bản xứ, viết nét thư pháp bằng cảm ứng và nhớ từ vựng thần tốc qua đòn bẩy Hán - Việt.
-                </p>
-
-                {/* Daily Quest Mini Tracker */}
-                <div className="mt-4 flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-100/90 dark:bg-obsidian-950/70 border border-stone-200 dark:border-slate-700/80 text-xs font-bold text-stone-800 dark:text-slate-200 shadow-sm">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                    <span>Thẻ Flashcard: {srsDueCount > 0 ? `${srsDueCount} từ cần ôn` : 'Đã hoàn thành! ✨'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-100/90 dark:bg-obsidian-950/70 border border-stone-200 dark:border-slate-700/80 text-xs font-bold text-stone-800 dark:text-slate-200 shadow-sm">
-                    <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-                    <span>Vốn từ: {progressService.getProfile().masteredWordIds.length} chữ vững vàng</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3D Holographic Character Seal (Interactive Depth Relief) */}
-              <div className="hidden xl:flex items-center justify-center">
-                <Tilt3DCard
-                  depth={24}
-                  maxTiltAngle={15}
-                  glareOpacity={0.25}
-                  className="rounded-3xl shadow-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-emerald-500/10 p-4"
-                >
-                  <div
-                    className="flex flex-col items-center justify-center w-36 h-36 relative select-none cursor-pointer"
-                    style={{ transformStyle: 'preserve-3d' }}
-                    onClick={() => handlePlayTTS(activeChar)}
-                    title="Nhấn để nghe phát âm chữ Hán 3D"
-                  >
-                    {/* Background Calligraphic Red Seal Stamp */}
-                    <div
-                      className="absolute inset-2 rounded-2xl border-2 border-dashed border-red-500/30 bg-red-500/5 flex items-center justify-center transition-transform"
-                      style={{ transform: 'translateZ(10px)' }}
-                    >
-                      <span className="text-[10px] font-bold text-red-400/60 uppercase tracking-widest">HanziVibe</span>
-                    </div>
-
-                    {/* Giant 3D Hanzi Glyph */}
-                    <span
-                      className="text-6xl font-serif font-black text-amber-500 dark:text-amber-400 drop-shadow-[0_8px_16px_rgba(245,158,11,0.35)] transition-transform"
-                      style={{ transform: 'translateZ(32px)' }}
-                    >
-                      {activeChar}
-                    </span>
-
-                    {/* Floating Pinyin & Meaning Tag */}
-                    <div
-                      className="mt-2 px-2.5 py-0.5 rounded-full bg-stone-900/80 dark:bg-obsidian-950/90 border border-amber-400/40 text-[10px] font-mono font-bold text-amber-300 shadow-md transition-transform flex items-center gap-1"
-                      style={{ transform: 'translateZ(44px)' }}
-                    >
-                      <span>{selectedWord.pinyin}</span>
-                      <Volume2 className="w-2.5 h-2.5 text-amber-400" />
-                    </div>
-                  </div>
-                </Tilt3DCard>
-              </div>
-
-              {/* Quick Adventure Launchers (3D Parallax Tilt Buttons) */}
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3 shrink-0 lg:max-w-sm w-full">
-                <Tilt3DCard depth={12} maxTiltAngle={10} className="h-full">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('flashcard')}
-                    className="w-full h-full btn-tactile btn-tactile-amber p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
-                  >
-                    <span className="text-2xl group-hover:scale-110 transition-transform">🎴</span>
-                    <span className="text-xs font-black text-white">Ôn Flashcard</span>
-                    <span className="text-[10px] text-amber-100 font-medium">Lật thẻ nhớ lâu</span>
-                  </button>
-                </Tilt3DCard>
-
-                <Tilt3DCard depth={12} maxTiltAngle={10} className="h-full">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('battle')}
-                    className="w-full h-full btn-tactile btn-tactile-coral p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
-                  >
-                    <span className="text-2xl group-hover:scale-110 transition-transform">⚡</span>
-                    <span className="text-xs font-black text-white">Đấu Trường 60s</span>
-                    <span className="text-[10px] text-rose-100 font-medium">Đua phản xạ nhanh</span>
-                  </button>
-                </Tilt3DCard>
-
-                <Tilt3DCard depth={12} maxTiltAngle={10} className="h-full">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('canvas')}
-                    className="w-full h-full btn-tactile btn-tactile-emerald p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
-                  >
-                    <span className="text-2xl group-hover:scale-110 transition-transform">✍️</span>
-                    <span className="text-xs font-black text-white">Luyện Viết Chữ</span>
-                    <span className="text-[10px] text-emerald-100 font-medium">Bút thuận cảm ứng</span>
-                  </button>
-                </Tilt3DCard>
-
-                <Tilt3DCard depth={12} maxTiltAngle={10} className="h-full">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('reader')}
-                    className="w-full h-full btn-tactile btn-tactile-cyan p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
-                  >
-                    <span className="text-2xl group-hover:scale-110 transition-transform">🔍</span>
-                    <span className="text-xs font-black text-white">Khoanh Hỏi AI</span>
-                    <span className="text-[10px] text-cyan-100 font-medium">8 bài học HSK</span>
-                  </button>
-                </Tilt3DCard>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 2. 4 Cung Bậc Thanh Điệu 🎵 (Melodic Tone Soundboard with 3D Tilt Cards) */}
-        <section className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-black text-stone-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-              <span>4 Cung Bậc Thanh Điệu 🎵 — Chạm để nghe nhạc điệu tiếng Trung</span>
-            </h3>
-            <span className="text-[11px] text-stone-500 dark:text-slate-400 font-bold hidden sm:inline">
-              Mô hình chuẩn Ngữ Điệu Bản Xứ
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {([1, 2, 3, 4] as const).map((toneNum) => {
-              const toneMeta = {
-                1: {
-                  name: 'Thanh 1: Ngang Bằng',
-                  symbol: '―',
-                  desc: 'Bay bổng 🕊️',
-                  tip: 'Âm cao đều, ngân vang',
-                  bg: 'bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/40 text-cyan-600 dark:text-cyan-400',
-                },
-                2: {
-                  name: 'Thanh 2: Lên Dốc',
-                  symbol: '↗',
-                  desc: 'Vút cao 🚀',
-                  tip: 'Trầm vút lên như câu hỏi',
-                  bg: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-600 dark:text-amber-400',
-                },
-                3: {
-                  name: 'Thanh 3: Uốn Lượn',
-                  symbol: '⤹↗',
-                  desc: 'Sóng nước 🌊',
-                  tip: 'Hạ trầm sâu rồi vút lên',
-                  bg: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/40 text-emerald-600 dark:text-emerald-400',
-                },
-                4: {
-                  name: 'Thanh 4: Dứt Khoát',
-                  symbol: '↘',
-                  desc: 'Rơi dốc ⚡',
-                  tip: 'Rơi mạnh và dứt khoát',
-                  bg: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/40 text-red-600 dark:text-red-400',
-                },
-              }[toneNum];
-
-              return (
-                <Tilt3DCard key={toneNum} depth={18} maxTiltAngle={12} className="h-full">
-                  <button
-                    type="button"
-                    onClick={() => handlePlayTone(toneNum)}
-                    className={`w-full h-full card-tactile p-4 text-left transition-all border ${toneMeta.bg} bg-white/90 dark:bg-obsidian-900/80 shadow-md ${
-                      playingTone === toneNum ? 'scale-95 shadow-xl ring-2 ring-amber-400/50' : 'hover:-translate-y-1'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-2xl font-black font-mono">{toneMeta.symbol}</span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-stone-100 dark:bg-obsidian-950/80 border border-stone-200 dark:border-slate-700 font-bold text-stone-700 dark:text-slate-300">
-                        {toneMeta.desc}
-                      </span>
-                    </div>
-                    <div className="text-xs font-black text-stone-900 dark:text-white">{toneMeta.name}</div>
-                    <div className="text-[11px] opacity-80 mt-0.5 text-stone-600 dark:text-slate-300">{toneMeta.tip}</div>
-                    <div className="mt-2 text-[10px] font-bold text-cyber-cyan flex items-center gap-1">
-                      <Volume2 className="w-3 h-3" />
-                      <span>Chạm nghe âm mẫu</span>
-                    </div>
-                  </button>
-                </Tilt3DCard>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 3. Chunky Tactile 3D Navigation Tabs (Duolingo Style) */}
-        <section className="mb-6">
-          <div className="flex items-center gap-2 p-1.5 bg-stone-100/90 dark:bg-obsidian-900/90 rounded-2xl border border-stone-200 dark:border-slate-800 shadow-md overflow-x-auto scrollbar-none">
-            {/* Tab 1: Flashcard */}
+      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 flex flex-col gap-6">
+        {/* Focused Single-Task Navigation Bar */}
+        <section className="w-full">
+          <div className="flex items-center gap-2 p-1.5 bg-white/90 dark:bg-obsidian-900/90 rounded-2xl border border-stone-200/90 dark:border-slate-800 shadow-md overflow-x-auto scrollbar-none backdrop-blur-md">
+            {/* Tab 1: Roadmap */}
             <button
               type="button"
-              onClick={() => setActiveTab('flashcard')}
+              onClick={() => setActiveTab('roadmap')}
               className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
-                activeTab === 'flashcard'
+                activeTab === 'roadmap'
                   ? 'btn-tactile-amber text-white shadow-lg'
-                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  : 'bg-transparent border-transparent text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
               }`}
             >
-              <span className="text-base mr-1.5">🎴</span>
-              <span>Flashcards</span>
+              <Compass className="w-4 h-4 mr-1.5 text-amber-500" />
+              <span>🗺️ Lộ Trình HSK 1</span>
+            </button>
+
+            {/* Tab 2: Visual Vocab */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('vocab')}
+              className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
+                activeTab === 'vocab'
+                  ? 'btn-tactile-coral text-white shadow-lg'
+                  : 'bg-transparent border-transparent text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
+              }`}
+            >
+              <span className="text-base mr-1.5">📚</span>
+              <span>Học Từ Vựng</span>
               {srsDueCount > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px] font-black animate-pulse">
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[9px] font-black animate-pulse">
                   {srsDueCount}
                 </span>
               )}
-            </button>
-
-            {/* Tab 2: Battle 60s */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('battle')}
-              className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
-                activeTab === 'battle'
-                  ? 'btn-tactile-coral text-white shadow-lg'
-                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <span className="text-base mr-1.5">⚡</span>
-              <span>Đấu Trường</span>
-              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-400 text-obsidian-950 text-[9px] font-black uppercase">
-                Hot
-              </span>
             </button>
 
             {/* Tab 3: Canvas */}
@@ -361,28 +199,25 @@ export default function HomePage() {
               className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
                 activeTab === 'canvas'
                   ? 'btn-tactile-emerald text-white shadow-lg'
-                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  : 'bg-transparent border-transparent text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
               }`}
             >
               <span className="text-base mr-1.5">✍️</span>
-              <span>Luyện Viết Chữ</span>
+              <span>Luyện Viết Nét</span>
             </button>
 
-            {/* Tab 4: Reader */}
+            {/* Tab 4: Reader & AI */}
             <button
               type="button"
               onClick={() => setActiveTab('reader')}
-              className={`flex-1 min-w-[150px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
+              className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
                 activeTab === 'reader'
                   ? 'btn-tactile-cyan text-white shadow-lg'
-                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  : 'bg-transparent border-transparent text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
               }`}
             >
               <span className="text-base mr-1.5">📖</span>
               <span>Đọc &amp; Hỏi AI</span>
-              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-cyan-400/20 text-cyan-300 text-[9px] font-bold">
-                8 Bài
-              </span>
             </button>
 
             {/* Tab 5: Pitch Studio */}
@@ -392,62 +227,108 @@ export default function HomePage() {
               className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
                 activeTab === 'pitch'
                   ? 'btn-tactile-indigo text-white shadow-lg'
-                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  : 'bg-transparent border-transparent text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
               }`}
             >
               <span className="text-base mr-1.5">🎙️</span>
               <span>Phòng Luyện Âm</span>
             </button>
 
-            {/* Tab 6: Dictionary */}
+            {/* Tab 6: Battle 60s */}
             <button
               type="button"
-              onClick={() => setActiveTab('dictionary')}
-              className={`flex-1 min-w-[130px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
-                activeTab === 'dictionary'
-                  ? 'btn-tactile-cyan text-white shadow-lg'
-                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
+              onClick={() => setActiveTab('battle')}
+              className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
+                activeTab === 'battle'
+                  ? 'btn-tactile-coral text-white shadow-lg'
+                  : 'bg-transparent border-transparent text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
               }`}
             >
-              <span className="text-base mr-1.5">📚</span>
-              <span>Từ Điển HSK</span>
+              <span className="text-base mr-1.5">⚡</span>
+              <span>Đấu Trường 60s</span>
             </button>
           </div>
         </section>
 
-        {/* Tab Content Display */}
+        {/* Focused Learning Workspace Display */}
         <section className="flex-1 w-full">
-          {/* TAB 1: Quizlet Flashcard Hub (Flip, Quiz, Match Game) */}
-          {activeTab === 'flashcard' && (
-            <div className="bg-obsidian-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xl">
-              <FlashcardHub
-                curriculum={HSK_CURRICULUM}
-                selectedWord={selectedWord}
-                onWordSelect={(word) => {
-                  setSelectedWord(word);
-                  setSelectedCharIndex(0);
-                }}
-              />
-            </div>
+          {/* TAB 1: Roadmap Journey (Default Focus View) */}
+          {activeTab === 'roadmap' && (
+            <RoadmapJourney
+              onSelectLesson={handleSelectLesson}
+              streakDays={progressService.getProfile().streakDays}
+            />
           )}
 
-          {/* TAB 2: HanziWriter Interactive Stroke Canvas & Sentence Writing Studio */}
+          {/* TAB 2: Visual Vocab Studio (Single-Word Focus + Mnemonic) */}
+          {activeTab === 'vocab' && (
+            <VisualVocabStudio
+              word={selectedWord}
+              allWords={activeLessonWords.length > 0 ? activeLessonWords : HSK_CURRICULUM}
+              onSelectWord={(w) => {
+                setSelectedWord(w);
+                setSelectedCharIndex(0);
+              }}
+              onNavigateToWrite={(char) => {
+                setSelectedCharIndex(0);
+                setActiveTab('canvas');
+              }}
+              onBackToRoadmap={() => setActiveTab('roadmap')}
+              lessonTitle={
+                currentLesson
+                  ? `Bài ${currentLesson.order}: ${currentLesson.title}`
+                  : undefined
+              }
+            />
+          )}
+
+          {/* TAB 3: HanziWriter Interactive Stroke Canvas & Guided Writing Studio */}
           {activeTab === 'canvas' && (
-            <div className="flex flex-col gap-6 w-full">
+            <div className="flex flex-col gap-6 w-full max-w-4xl mx-auto">
+              {/* Studio Header: Breadcrumb & Complete Lesson Action */}
+              <div className="flex items-center justify-between flex-wrap gap-3 p-4 rounded-3xl bg-white/90 dark:bg-obsidian-900/90 border border-stone-200/90 dark:border-slate-800 shadow-md backdrop-blur-md">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('roadmap')}
+                    className="px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-stone-700 dark:text-slate-300 text-xs font-bold transition-all flex items-center gap-1 active:scale-95"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Lộ Trình HSK 1</span>
+                  </button>
+
+                  <span className="text-xs font-bold text-stone-600 dark:text-slate-300">
+                    {currentLesson ? `Bài ${currentLesson.order}: ${currentLesson.title}` : 'Luyện Viết Tự Do'}
+                  </span>
+                </div>
+
+                {/* Complete Lesson Button */}
+                {currentLesson && (
+                  <button
+                    type="button"
+                    onClick={handleCompleteLesson}
+                    className="btn-tactile btn-tactile-amber py-2.5 px-4 text-xs font-black text-white gap-2 shadow-sm"
+                  >
+                    <Star className="w-4 h-4 fill-amber-300 text-amber-300" />
+                    <span>Hoàn Thành Bài &amp; Nhận 3 ⭐</span>
+                  </button>
+                )}
+              </div>
+
               {/* Sub-mode Switcher: Chữ đơn vs Mẫu câu HSK 1 */}
-              <div className="flex items-center justify-between flex-wrap gap-3 p-2.5 bg-obsidian-900 border border-slate-800 rounded-2xl shadow-md">
-                <div className="flex items-center bg-obsidian-950 p-1 rounded-xl border border-slate-800 shadow-inner">
+              <div className="flex items-center justify-between flex-wrap gap-3 p-2.5 bg-white/80 dark:bg-obsidian-900/80 border border-stone-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                <div className="flex items-center bg-stone-100 dark:bg-obsidian-950 p-1 rounded-xl border border-stone-200 dark:border-slate-800 shadow-inner">
                   <button
                     type="button"
                     onClick={() => setCanvasSubMode('single')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                       canvasSubMode === 'single'
-                        ? 'bg-cyber-cyan text-obsidian-950 shadow-md font-extrabold'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'btn-tactile btn-tactile-emerald text-white shadow-md'
+                        : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
                     }`}
                   >
                     <Edit3 className="w-3.5 h-3.5" />
-                    <span>Luyện chữ đơn HSK</span>
+                    <span>Luyện chữ đơn có hướng dẫn</span>
                   </button>
 
                   <button
@@ -455,36 +336,33 @@ export default function HomePage() {
                     onClick={() => setCanvasSubMode('sentence')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                       canvasSubMode === 'sentence'
-                        ? 'bg-cyber-cyan text-obsidian-950 shadow-md font-extrabold'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'btn-tactile btn-tactile-cyan text-white shadow-md'
+                        : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-white'
                     }`}
                   >
                     <BookOpen className="w-3.5 h-3.5" />
-                    <span>Luyện viết mẫu câu HSK 1</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-400 text-obsidian-950 font-black uppercase">
-                      Mới
-                    </span>
+                    <span>Luyện viết mẫu câu</span>
                   </button>
                 </div>
 
-                <div className="text-xs text-slate-400 pr-2">
+                <div className="text-xs text-stone-500 dark:text-slate-400 pr-2">
                   {canvasSubMode === 'single'
-                    ? 'Luyện từng nét bút thuận, hỗ trợ viết nhớ ẩn nét mờ'
-                    : 'Luyện viết toàn bộ chữ trong câu để nhớ sâu từ Hán'}
+                    ? 'Chế độ có nét mờ (Ghost guide) & hướng dẫn bút thuận'
+                    : 'Luyện viết từng chữ trong mẫu câu giao tiếp'}
                 </div>
               </div>
 
               {canvasSubMode === 'sentence' ? (
                 <SentenceWritingStudio />
               ) : (
-                <div className="bg-obsidian-900 border border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center shadow-xl">
-                  <div className="w-full flex items-center justify-between flex-wrap gap-3 pb-4 mb-4 border-b border-slate-800">
+                <div className="bg-white/90 dark:bg-obsidian-900/90 border border-stone-200/90 dark:border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center shadow-xl backdrop-blur-md">
+                  <div className="w-full flex items-center justify-between flex-wrap gap-3 pb-4 mb-4 border-b border-stone-200 dark:border-slate-800">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs px-2.5 py-1 rounded-md bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan font-bold">
-                        Từ đang chọn: {selectedWord.hanzi} ({selectedWord.pinyin})
+                      <span className="text-xs px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold">
+                        Chữ đang luyện: {selectedWord.hanzi} ({selectedWord.pinyin})
                       </span>
-                      <span className="text-xs text-slate-400">
-                        Âm Hán Việt: <strong className="text-amber-400">{selectedWord.sinoVietnamese}</strong>
+                      <span className="text-xs text-stone-500 dark:text-slate-400">
+                        Hán Việt: <strong className="text-stone-900 dark:text-white">{selectedWord.sinoVietnamese}</strong>
                       </span>
                     </div>
 
@@ -492,27 +370,27 @@ export default function HomePage() {
                       <button
                         type="button"
                         onClick={() => handlePlayTTS(selectedWord.hanzi)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-stone-700 dark:text-slate-300 border border-stone-200 dark:border-slate-700 text-xs font-semibold transition-colors"
                       >
-                        <Volume2 className="w-3.5 h-3.5 text-cyber-cyan" />
-                        <span>Nghe từ</span>
+                        <Volume2 className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Nghe âm mẫu</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setIsAiOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyber-cyan/15 hover:bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/40 text-xs font-bold transition-colors"
+                        className="btn-tactile btn-tactile-cyan px-3 py-1.5 text-xs font-bold text-white gap-1.5 shadow-sm"
                       >
-                        <Bot className="w-3.5 h-3.5" />
-                        <span>Hỏi Gemini AI</span>
+                        <Bot className="w-3.5 h-3.5 text-white" />
+                        <span>Hỏi AI về nét này</span>
                       </button>
                     </div>
                   </div>
 
                   {/* Character Selector for multi-character words */}
                   {wordChars.length > 1 && (
-                    <div className="flex items-center gap-2 p-1.5 bg-obsidian-950 rounded-2xl border border-slate-800 text-xs mb-4">
-                      <span className="text-slate-400 font-medium px-2">Chọn chữ luyện viết:</span>
+                    <div className="flex items-center gap-2 p-1.5 bg-stone-100 dark:bg-obsidian-950 rounded-2xl border border-stone-200 dark:border-slate-800 text-xs mb-4">
+                      <span className="text-stone-500 dark:text-slate-400 font-medium px-2">Chọn chữ luyện viết:</span>
                       {wordChars.map((char, idx) => (
                         <button
                           key={char + idx}
@@ -520,8 +398,8 @@ export default function HomePage() {
                           onClick={() => setSelectedCharIndex(idx)}
                           className={`px-3.5 py-1.5 rounded-xl font-serif text-base font-bold transition-all ${
                             selectedCharIndex === idx
-                              ? 'bg-cyber-cyan text-obsidian-950 shadow-md scale-105'
-                              : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+                              ? 'bg-amber-500 text-white shadow-md scale-105'
+                              : 'bg-white dark:bg-slate-800 text-stone-700 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-slate-700'
                           }`}
                         >
                           {char}

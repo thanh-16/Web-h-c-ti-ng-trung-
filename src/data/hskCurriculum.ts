@@ -26,6 +26,9 @@ export const HSK_CURRICULUM: HskWord[] = [
     decomposition: 'Bên trái là bộ Nhân đứng (亻), bên phải là chữ Nhĩ (尔) mang ý nghĩa người đối diện',
     mnemonic: 'Người (亻) đang đứng trò chuyện đối diện chính là Bạn (NHĨ - 你)',
     toneAnalysis: 'Thanh 3 (214): Khởi đầu ở bậc 2, hạ thấp xuống đáy thanh quản bậc 1 rồi uốn nhẹ lên bậc 4. Trầm ấm, có độ trũng.',
+    illustrationIcon: '👋',
+    illustrationPrompt: 'Hình ảnh hai người bạn mỉm cười vẫy tay chào nhau thân ái dưới ánh nắng sớm.',
+    strokeOrderNames: ['Phẩy', 'Sổ', 'Phẩy ngắn', 'Ngang móc', 'Sổ', 'Phẩy', 'Chấm'],
     exampleSentence: {
       chinese: '你好，很高兴认识你。',
       pinyin: 'Nǐ hǎo, hěn gāoxìng rènshi nǐ.',
@@ -55,6 +58,9 @@ export const HSK_CURRICULUM: HskWord[] = [
     decomposition: 'Bên trái là bộ Nữ (女), bên phải là bộ Tử (子 - con cái)',
     mnemonic: 'Người mẹ (女) ẵm đứa con (子) trên tay là điều Tốt Đẹp, Hạnh Phúc nhất (HẢO - 好)',
     toneAnalysis: 'Thanh 3 (214): Độ dốc rơi từ trung bình xuống sâu rồi vút nhẹ cuối âm. Khi đi trước thanh 3 khác sẽ biến điệu thành thanh 2.',
+    illustrationIcon: '🌸',
+    illustrationPrompt: 'Người mẹ dịu hiền ôm đứa con nhỏ trong tay với nụ cười hạnh phúc rạng ngời.',
+    strokeOrderNames: ['Phẩy chấm', 'Phẩy', 'Ngang', 'Ngang móc', 'Cong móc', 'Ngang'],
     exampleSentence: {
       chinese: '今天天气非常好。',
       pinyin: 'Jīntiān tiānqì fēicháng hǎo.',
@@ -85,6 +91,9 @@ export const HSK_CURRICULUM: HskWord[] = [
     decomposition: 'Ghép từ chữ 你 (Nhĩ: bạn) và chữ 好 (Hảo: tốt đẹp)',
     mnemonic: 'Chúc bạn (NHĨ) luôn luôn gặp điều tốt lành (HẢO) -> Lời chào chân thành NHĨ HẢO (你好)',
     toneAnalysis: 'Biến điệu hai Thanh 3 liên tiếp: Chữ "你" biến âm đọc thành Thanh 2 (ní), chữ "好" giữ nguyên Thanh 3 (hǎo).',
+    illustrationIcon: '🤝',
+    illustrationPrompt: 'Hai người bạn bắt tay nhau thân thiết, trao gửi lời chào an lành.',
+    strokeOrderNames: ['Phẩy', 'Sổ', 'Phẩy ngắn', 'Ngang móc', 'Sổ', 'Phẩy', 'Chấm', 'Phẩy chấm', 'Phẩy', 'Ngang', 'Ngang móc', 'Cong móc', 'Ngang'],
     exampleSentence: {
       chinese: '王老师，您好！',
       pinyin: 'Wáng lǎoshī, nín hǎo!',

@@ -134,7 +134,7 @@ export const HSK1_SENTENCES: HskSentence[] = [
   // 8. Thời tiết
   {
     id: 'hsk1-sent-08',
-    category: 'Thời gian & Thời tiết',
+    category: 'Thời gian & Địa điểm',
     chinese: '今天天气很好。',
     pinyin: 'Jīntiān tiānqì hěn hǎo.',
     sinoVietnamese: 'Kim thiên thiên khí hấn hảo.',
@@ -220,6 +220,120 @@ export const HSK1_SENTENCES: HskSentence[] = [
       { char: '了', pinyin: 'le', sinoVietnamese: 'LIỄU', meaning: 'Rồi (trợ từ ngữ khí)' },
     ],
   },
+
+  // 13. Mua sắm & Hỏi giá tiền
+  {
+    id: 'hsk1-sent-13',
+    category: 'Mua sắm & Giá cả',
+    chinese: '这个多少钱？',
+    pinyin: 'Zhège duōshao qián?',
+    sinoVietnamese: 'Giá cá đa thiểu tiền?',
+    vietnamese: 'Cái này bao nhiêu tiền?',
+    grammarTip: 'Đại từ nghi vấn "多少" (bao nhiêu) dùng hỏi số lượng lớn hoặc tiền tệ, theo sau là danh từ "钱" (tiền).',
+    characters: [
+      { char: '这', pinyin: 'zhè', sinoVietnamese: 'GIÁ', meaning: 'Đây, này' },
+      { char: '个', pinyin: 'ge', sinoVietnamese: 'CÁ', meaning: 'Cái, con (lượng từ chung)' },
+      { char: '多', pinyin: 'duō', sinoVietnamese: 'ĐA', meaning: 'Nhiều' },
+      { char: '少', pinyin: 'shǎo', sinoVietnamese: 'THIỂU', meaning: 'Ít' },
+      { char: '钱', pinyin: 'qián', sinoVietnamese: 'TIỀN', meaning: 'Tiền bạc' },
+    ],
+  },
+
+  // 14. Mời trà lịch sự
+  {
+    id: 'hsk1-sent-14',
+    category: 'Ăn uống & Đời sống',
+    chinese: '请坐，请喝茶。',
+    pinyin: 'Qǐng zuò, qǐng hē chá.',
+    sinoVietnamese: 'Thỉnh tọa, thỉnh hát trà.',
+    vietnamese: 'Mời ngồi, mời uống trà.',
+    grammarTip: 'Từ chỉ sự kính trọng "请" (qǐng - xin mời) đứng đầu mệnh đề để thể hiện phép lịch sự tối cao trong văn hóa Trung Hoa.',
+    characters: [
+      { char: '请', pinyin: 'qǐng', sinoVietnamese: 'THỈNH', meaning: 'Mời, xin thỉnh' },
+      { char: '坐', pinyin: 'zuò', sinoVietnamese: 'TỌA', meaning: 'Ngồi' },
+      { char: '请', pinyin: 'qǐng', sinoVietnamese: 'THỈNH', meaning: 'Mời' },
+      { char: '喝', pinyin: 'hē', sinoVietnamese: 'HÁT', meaning: 'Uống' },
+      { char: '茶', pinyin: 'chá', sinoVietnamese: 'TRÀ', meaning: 'Trà, chè' },
+    ],
+  },
+
+  // 15. Khả năng viết chữ Hán
+  {
+    id: 'hsk1-sent-15',
+    category: 'Học tập & Giao tiếp',
+    chinese: '你会写汉字吗？',
+    pinyin: 'Nǐ huì xiě hànzì ma?',
+    sinoVietnamese: 'Nhĩ hội tả Hán tự ma?',
+    vietnamese: 'Bạn có biết viết chữ Hán không?',
+    grammarTip: 'Động từ năng nguyện "会" (huì) biểu thị kỹ năng thông qua học tập, kết hợp với trợ từ nghi vấn "吗" ở cuối câu.',
+    characters: [
+      { char: '你', pinyin: 'nǐ', sinoVietnamese: 'NHĨ', meaning: 'Bạn' },
+      { char: '会', pinyin: 'huì', sinoVietnamese: 'HỘI', meaning: 'Biết (qua học hỏi)' },
+      { char: '写', pinyin: 'xiě', sinoVietnamese: 'TẢ', meaning: 'Viết' },
+      { char: '汉', pinyin: 'hàn', sinoVietnamese: 'HÁN', meaning: 'Hán, tiếng Hán' },
+      { char: '字', pinyin: 'zì', sinoVietnamese: 'TỰ', meaning: 'Chữ' },
+      { char: '吗', pinyin: 'ma', sinoVietnamese: 'MA', meaning: 'Không (hỏi)' },
+    ],
+  },
+
+  // 16. Khen ngợi món ăn
+  {
+    id: 'hsk1-sent-16',
+    category: 'Ăn uống & Đời sống',
+    chinese: '中国菜太好吃了！',
+    pinyin: 'Zhōngguó cài tài hǎochī le!',
+    sinoVietnamese: 'Trung Quốc thái thái hảo cật liễu!',
+    vietnamese: 'Món ăn Trung Quốc ngon quá chừng!',
+    grammarTip: 'Cấu trúc cảm thán "太 + Tính từ + 了" dùng để ngợi khen nhiệt tình mức độ ngon của món ăn.',
+    characters: [
+      { char: '中', pinyin: 'zhōng', sinoVietnamese: 'TRUNG', meaning: 'Ở giữa, trung tâm' },
+      { char: '国', pinyin: 'guó', sinoVietnamese: 'QUỐC', meaning: 'Đất nước' },
+      { char: '菜', pinyin: 'cài', sinoVietnamese: 'THÁI', meaning: 'Món ăn, rau' },
+      { char: '太', pinyin: 'tài', sinoVietnamese: 'THÁI', meaning: 'Quá, rất' },
+      { char: '好', pinyin: 'hǎo', sinoVietnamese: 'HẢO', meaning: 'Tốt, ngon' },
+      { char: '吃', pinyin: 'chī', sinoVietnamese: 'CẬT', meaning: 'Ăn' },
+      { char: '了', pinyin: 'le', sinoVietnamese: 'LIỄU', meaning: 'Trợ từ cảm thán' },
+    ],
+  },
+
+  // 17. Lịch trình ngày mai
+  {
+    id: 'hsk1-sent-17',
+    category: 'Thời gian & Địa điểm',
+    chinese: '我们明天去学校。',
+    pinyin: 'Wǒmen míngtiān qù xuéxiào.',
+    sinoVietnamese: 'Ngã môn minh thiên khứ học hiệu.',
+    vietnamese: 'Ngày mai chúng tôi đi đến trường.',
+    grammarTip: 'Trạng từ thời gian "明天" (ngày mai) đứng trước hoặc sau chủ ngữ "我们", luôn đứng TRƯỚC động từ "去".',
+    characters: [
+      { char: '我', pinyin: 'wǒ', sinoVietnamese: 'NGÃ', meaning: 'Tôi' },
+      { char: '们', pinyin: 'men', sinoVietnamese: 'MÔN', meaning: 'Chúng (số nhiều)' },
+      { char: '明', pinyin: 'míng', sinoVietnamese: 'MINH', meaning: 'Sáng, mai' },
+      { char: '天', pinyin: 'tiān', sinoVietnamese: 'THIÊN', meaning: 'Ngày, trời' },
+      { char: '去', pinyin: 'qù', sinoVietnamese: 'KHỨ', meaning: 'Đi' },
+      { char: '学', pinyin: 'xué', sinoVietnamese: 'HỌC', meaning: 'Học' },
+      { char: '校', pinyin: 'xiào', sinoVietnamese: 'HIỆU', meaning: 'Trường' },
+    ],
+  },
+
+  // 18. Số lượng thành viên gia đình
+  {
+    id: 'hsk1-sent-18',
+    category: 'Giới thiệu bản thân',
+    chinese: '我家有四口人。',
+    pinyin: 'Wǒ jiā yǒu sì kǒu rén.',
+    sinoVietnamese: 'Ngã gia hữu tứ khẩu nhân.',
+    vietnamese: 'Nhà tôi có bốn người.',
+    grammarTip: 'Lượng từ "口" (kǒu) dùng đếm nhân khẩu gia đình, đứng giữa số từ "四" và danh từ "人".',
+    characters: [
+      { char: '我', pinyin: 'wǒ', sinoVietnamese: 'NGÃ', meaning: 'Tôi' },
+      { char: '家', pinyin: 'jiā', sinoVietnamese: 'GIA', meaning: 'Nhà, gia đình' },
+      { char: '有', pinyin: 'yǒu', sinoVietnamese: 'HỮU', meaning: 'Có' },
+      { char: '四', pinyin: 'sì', sinoVietnamese: 'TỨ', meaning: 'Bốn (4)' },
+      { char: '口', pinyin: 'kǒu', sinoVietnamese: 'KHẨU', meaning: 'Miệng, lượng từ người' },
+      { char: '人', pinyin: 'rén', sinoVietnamese: 'NHÂN', meaning: 'Người' },
+    ],
+  },
 ];
 
 /**
@@ -232,6 +346,6 @@ export const HSK1_SENTENCE_CATEGORIES = [
   'Giới thiệu bản thân',
   'Học tập & Giao tiếp',
   'Ăn uống & Đời sống',
-  'Thời gian & Thời tiết',
   'Thời gian & Địa điểm',
+  'Mua sắm & Giá cả',
 ] as const;

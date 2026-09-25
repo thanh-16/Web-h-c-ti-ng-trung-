@@ -7,17 +7,44 @@
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
   --sar: env(safe-area-inset-right, 0px);
+
+  /* Light Theme (Giấy Tuyên Ấm Áp) */
+  --bg-app: #FAF7F2;
+  --bg-card: #FFFFFF;
+  --bg-card-subtle: #F4EFE6;
+  --text-main: #1E293B;
+  --text-muted: #64748B;
+  --border-theme: #E5DCD0;
+}
+
+html.dark {
+  /* Dark Theme (Đêm Mực Tàu) */
+  --bg-app: #0A0F1D;
+  --bg-card: #111A2E;
+  --bg-card-subtle: #17233D;
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --border-theme: #1E2E4E;
 }
 
 /* Prevent unwanted browser behaviors on mobile/tablet */
 html,
 body {
-  background-color: #0B0F17;
-  color: #F8FAFC;
   overscroll-behavior-y: none;
   overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+html:not(.dark) body {
+  background-color: #FAF7F2;
+  color: #1E293B;
+}
+
+html.dark body {
+  background-color: #0A0F1D;
+  color: #F8FAFC;
 }
 
 /* Safe area padding utilities */
@@ -125,4 +152,138 @@ body {
 .animate-card-shake {
   animation: card-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
+
+/* =========================================================
+   DUOLINGO-STYLE TACTILE 3D BUTTONS & GAMIFICATION EFFECTS
+   ========================================================= */
+
+.btn-tactile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  border-radius: 1rem;
+  border-bottom-width: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-tactile:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1.5px);
+}
+
+.btn-tactile:active {
+  transform: translateY(2.5px);
+  border-bottom-width: 1px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.btn-tactile-emerald {
+  background-color: #10B981;
+  border-bottom-color: #047857;
+  color: #FFFFFF;
+}
+
+.btn-tactile-amber {
+  background-color: #F59E0B;
+  border-bottom-color: #B45309;
+  color: #FFFFFF;
+}
+
+.btn-tactile-cyan {
+  background-color: #06B6D4;
+  border-bottom-color: #0E7490;
+  color: #FFFFFF;
+}
+
+.btn-tactile-coral {
+  background-color: #EF4444;
+  border-bottom-color: #B91C1C;
+  color: #FFFFFF;
+}
+
+.btn-tactile-indigo {
+  background-color: #6366F1;
+  border-bottom-color: #4338CA;
+  color: #FFFFFF;
+}
+
+/* Gamified Flame & Badge Pulse */
+@keyframes flame-glow {
+  0%, 100% {
+    transform: scale(1) rotate(-1deg);
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8));
+  }
+  50% {
+    transform: scale(1.15) rotate(2deg);
+    filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.9));
+  }
+}
+
+.animate-flame-glow {
+  animation: flame-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-float {
+  animation: gentle-float 3s ease-in-out infinite;
+}
+
+/* Tactile 3D Card Hover */
+.card-tactile {
+  border-radius: 1.5rem;
+  border-bottom-width: 4px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card-tactile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 28px -6px rgba(0, 0, 0, 0.18);
+}
+
+/* Light Theme Color Adaptations for Obsidian Containers */
+html:not(.dark) .bg-obsidian-950 {
+  background-color: #FAF7F2 !important;
+  color: #1E293B !important;
+}
+
+html:not(.dark) .bg-obsidian-900 {
+  background-color: #FFFFFF !important;
+  border-color: #E6DCCD !important;
+  color: #1E293B !important;
+  box-shadow: 0 4px 20px -2px rgba(180, 150, 120, 0.1) !important;
+}
+
+html:not(.dark) .bg-obsidian-800 {
+  background-color: #F5EFE6 !important;
+  border-color: #E2D7C5 !important;
+  color: #1E293B !important;
+}
+
+html:not(.dark) .border-slate-800,
+html:not(.dark) .border-slate-700 {
+  border-color: #E5DDD0 !important;
+}
+
+html:not(.dark) .text-slate-100,
+html:not(.dark) .text-white {
+  color: #1E293B !important;
+}
+
+html:not(.dark) .text-slate-300,
+html:not(.dark) .text-slate-400 {
+  color: #475569 !important;
+}
+
+html:not(.dark) .text-slate-500 {
+  color: #64748B !important;
+}
+
 

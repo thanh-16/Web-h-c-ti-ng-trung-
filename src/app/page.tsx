@@ -14,6 +14,7 @@ import { GeminiAiModal } from '@/components/ai';
 import { InteractiveReaderStudio } from '@/components/reading';
 import { TimeAttackBattle } from '@/components/battle';
 import { srsService } from '@/services/srsService';
+import { progressService } from '@/services/progressService';
 import {
   Layers,
   Edit3,
@@ -27,6 +28,9 @@ import {
   Mic,
   Zap,
   Brain,
+  Flame,
+  Trophy,
+  CheckCircle2,
 } from 'lucide-react';
 
 type StudioTab = 'flashcard' | 'canvas' | 'reader' | 'pitch' | 'dictionary' | 'battle';
@@ -102,61 +106,152 @@ export default function HomePage() {
 
       {/* Main Studio Container */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 flex flex-col">
-        {/* Hero Banner */}
+        {/* 1. Gamified Quest & Motivation Hero Dashboard */}
         <section className="mb-6">
-          <div className="p-5 sm:p-7 rounded-3xl bg-gradient-to-r from-obsidian-900 via-slate-900 to-obsidian-900 border border-slate-800 relative overflow-hidden shadow-xl">
-            <div className="relative z-10 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan text-xs font-bold mb-3">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Nền tảng Học Tiếng Trung 4 Tầng Hán - Việt & AI Pitch F0</span>
+          <div className="p-5 sm:p-7 rounded-3xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-emerald-500/10 border border-amber-500/30 relative overflow-hidden shadow-xl transition-all">
+            {/* Subtle Calligraphic Seal Background Motif */}
+            <div className="absolute right-4 -bottom-6 text-9xl font-serif font-black text-amber-500/5 pointer-events-none select-none">
+              学
+            </div>
+
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-400 text-xs font-black mb-3 shadow-sm">
+                  <Flame className="w-3.5 h-3.5 fill-amber-400 text-orange-500 animate-flame-glow" />
+                  <span>Cùng Chinh Phục Tiếng Trung Mỗi Ngày!</span>
+                </div>
+
+                <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                  Chào bạn! 👋 Hôm nay cùng giữ chuỗi lửa <span className="text-amber-400">Streak {progressService.getProfile().streakDays} Ngày</span> nhé!
+                </h2>
+
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+                  Luyện phát âm 4 thanh điệu chuẩn như người bản xứ, viết nét thư pháp bằng cảm ứng và nhớ từ vựng thần tốc qua đòn bẩy Hán - Việt.
+                </p>
+
+                {/* Daily Quest Mini Tracker */}
+                <div className="mt-4 flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-obsidian-950/70 border border-slate-700/80 text-xs font-bold text-slate-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>Thẻ Flashcard: {srsDueCount > 0 ? `${srsDueCount} từ cần ôn` : 'Đã hoàn thành! ✨'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-obsidian-950/70 border border-slate-700/80 text-xs font-bold text-slate-200">
+                    <Trophy className="w-4 h-4 text-amber-400" />
+                    <span>Vốn từ: {progressService.getProfile().masteredWordIds.length} chữ vững vàng</span>
+                  </div>
+                </div>
               </div>
-              <h2 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
-                Luyện Âm Chuẩn Xác — Viết Nét Tinh Thông — Nhớ Lâu Với Flashcard 3D
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed max-w-2xl">
-                Tối ưu hóa đòn bẩy hơn 60% từ vựng Hán - Việt tương đồng. Tích hợp phân tích cao độ F0 thời gian thực (YIN Algorithm), bảng viết nét chuẩn bút thuận, Flashcard Quizlet 3D và trợ lý sư phạm Gemini AI 1.5 Flash.
-              </p>
+
+              {/* Quick Adventure Launchers (Tactile 3D Buttons) */}
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3 shrink-0 lg:max-w-sm w-full">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('flashcard')}
+                  className="btn-tactile btn-tactile-amber p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
+                >
+                  <span className="text-2xl group-hover:scale-110 transition-transform">🎴</span>
+                  <span className="text-xs font-black text-white">Ôn Flashcard</span>
+                  <span className="text-[10px] text-amber-100 font-medium">Lật thẻ nhớ lâu</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('battle')}
+                  className="btn-tactile btn-tactile-coral p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
+                >
+                  <span className="text-2xl group-hover:scale-110 transition-transform">⚡</span>
+                  <span className="text-xs font-black text-white">Đấu Trường 60s</span>
+                  <span className="text-[10px] text-rose-100 font-medium">Đua phản xạ nhanh</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('canvas')}
+                  className="btn-tactile btn-tactile-emerald p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
+                >
+                  <span className="text-2xl group-hover:scale-110 transition-transform">✍️</span>
+                  <span className="text-xs font-black text-white">Luyện Viết Chữ</span>
+                  <span className="text-[10px] text-emerald-100 font-medium">Bút thuận cảm ứng</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('reader')}
+                  className="btn-tactile btn-tactile-cyan p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
+                >
+                  <span className="text-2xl group-hover:scale-110 transition-transform">🔍</span>
+                  <span className="text-xs font-black text-white">Khoanh Hỏi AI</span>
+                  <span className="text-[10px] text-cyan-100 font-medium">8 bài học HSK</span>
+                </button>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* 4 Chinese Tones Quick Demonstration Bar */}
+        {/* 2. 4 Cung Bậc Thanh Điệu 🎵 (Melodic Tone Soundboard) */}
         <section className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Mic className="w-4 h-4 text-cyber-cyan" />
-              <span>4 Thanh Điệu Tiếng Trung (Mô hình Ngũ độ Chao)</span>
+            <h3 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-amber-400" />
+              <span>4 Cung Bậc Thanh Điệu 🎵 — Chạm để nghe nhạc điệu tiếng Trung</span>
             </h3>
-            <span className="text-[11px] text-slate-500 font-mono">Web Audio Oscillator</span>
+            <span className="text-[11px] text-slate-400 font-bold hidden sm:inline">
+              Mô hình chuẩn Ngữ Điệu Bản Xứ
+            </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {([1, 2, 3, 4] as const).map((toneNum) => {
               const toneMeta = {
-                1: { name: 'Thanh 1 (Âm Bình)', chao: '55', desc: 'Cao bằng', color: 'border-cyan-500/40 text-cyan-400 bg-cyan-950/20 hover:bg-cyan-950/40' },
-                2: { name: 'Thanh 2 (Dương Bình)', chao: '35', desc: 'Lên dốc', color: 'border-amber-500/40 text-amber-400 bg-amber-950/20 hover:bg-amber-950/40' },
-                3: { name: 'Thanh 3 (Thượng Thanh)', chao: '214', desc: 'Uốn trầm', color: 'border-emerald-500/40 text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/40' },
-                4: { name: 'Thanh 4 (Khứ Thanh)', chao: '51', desc: 'Rơi dốc', color: 'border-red-500/40 text-red-400 bg-red-950/20 hover:bg-red-950/40' },
+                1: {
+                  name: 'Thanh 1: Ngang Bằng',
+                  symbol: '―',
+                  desc: 'Bay bổng 🕊️',
+                  tip: 'Âm cao đều, ngân vang',
+                  bg: 'bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/40 text-cyan-400',
+                },
+                2: {
+                  name: 'Thanh 2: Lên Dốc',
+                  symbol: '↗',
+                  desc: 'Vút cao 🚀',
+                  tip: 'Trầm vút lên như câu hỏi',
+                  bg: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-400',
+                },
+                3: {
+                  name: 'Thanh 3: Uốn Lượn',
+                  symbol: '⤹↗',
+                  desc: 'Sóng nước 🌊',
+                  tip: 'Hạ trầm sâu rồi vút lên',
+                  bg: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/40 text-emerald-400',
+                },
+                4: {
+                  name: 'Thanh 4: Dứt Khoát',
+                  symbol: '↘',
+                  desc: 'Rơi dốc ⚡',
+                  tip: 'Rơi mạnh và dứt khoát',
+                  bg: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/40 text-red-400',
+                },
               }[toneNum];
 
               return (
                 <button
                   key={toneNum}
                   onClick={() => handlePlayTone(toneNum)}
-                  className={`p-3.5 rounded-2xl border text-left transition-all min-h-[44px] ${toneMeta.color} ${
-                    playingTone === toneNum ? 'scale-95 shadow-lg' : ''
+                  className={`card-tactile p-4 text-left transition-all border ${toneMeta.bg} ${
+                    playingTone === toneNum ? 'scale-95 shadow-xl ring-2 ring-white/50' : 'hover:-translate-y-1'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase">{toneMeta.name}</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-obsidian-950/80 border border-slate-700">
-                      Chao {toneMeta.chao}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-2xl font-black font-mono">{toneMeta.symbol}</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-obsidian-950/80 border border-slate-700 font-bold">
+                      {toneMeta.desc}
                     </span>
                   </div>
-                  <div className="mt-1 text-xs font-semibold">{toneMeta.desc}</div>
-                  <div className="mt-1 text-[10px] opacity-75 flex items-center gap-1">
+                  <div className="text-xs font-black text-white">{toneMeta.name}</div>
+                  <div className="text-[11px] opacity-80 mt-0.5">{toneMeta.tip}</div>
+                  <div className="mt-2 text-[10px] font-bold text-cyber-cyan flex items-center gap-1">
                     <Volume2 className="w-3 h-3" />
-                    <span>Nghe âm mẫu</span>
+                    <span>Chạm nghe âm mẫu</span>
                   </div>
                 </button>
               );
@@ -164,107 +259,102 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* SRS Review Alert Bar if due */}
-        {srsDueCount > 0 && (
-          <div className="mb-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2 font-medium">
-              <Brain className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
-              <span>
-                Hôm nay bạn có <strong>{srsDueCount} từ</strong> đến hạn ôn tập theo thuật toán SuperMemo SM-2!
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setActiveTab('flashcard')}
-              className="px-3 py-1 rounded-xl bg-amber-500 text-obsidian-950 font-bold text-xs hover:bg-amber-400 transition-colors shadow-sm"
-            >
-              Ôn ngay
-            </button>
-          </div>
-        )}
-
-        {/* Studio Primary Navigation Tabs */}
+        {/* 3. Chunky Tactile 3D Navigation Tabs (Duolingo Style) */}
         <section className="mb-6">
-          <div className="flex items-center bg-obsidian-900 p-1.5 rounded-2xl border border-slate-800 shadow-md overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-2 p-1.5 bg-obsidian-900/90 rounded-2xl border border-slate-800 shadow-md overflow-x-auto scrollbar-none">
+            {/* Tab 1: Flashcard */}
             <button
               type="button"
               onClick={() => setActiveTab('flashcard')}
-              className={`flex-1 min-w-[130px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+              className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
                 activeTab === 'flashcard'
-                  ? 'bg-cyber-cyan text-obsidian-950 shadow-md'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'btn-tactile-amber text-white shadow-lg'
+                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
               }`}
             >
-              <Layers className="w-4 h-4" />
-              <span>🎴 Thẻ Flashcard</span>
+              <span className="text-base mr-1.5">🎴</span>
+              <span>Flashcards</span>
+              {srsDueCount > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[10px] font-black animate-pulse">
+                  {srsDueCount}
+                </span>
+              )}
             </button>
 
+            {/* Tab 2: Battle 60s */}
             <button
               type="button"
               onClick={() => setActiveTab('battle')}
-              className={`flex-1 min-w-[145px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+              className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
                 activeTab === 'battle'
-                  ? 'bg-cyber-cyan text-obsidian-950 shadow-md font-extrabold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'btn-tactile-coral text-white shadow-lg'
+                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
               }`}
             >
-              <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-              <span>⚡ Đấu Trường 60s</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-obsidian-950 font-black uppercase">
+              <span className="text-base mr-1.5">⚡</span>
+              <span>Đấu Trường</span>
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-400 text-obsidian-950 text-[9px] font-black uppercase">
                 Hot
               </span>
             </button>
 
+            {/* Tab 3: Canvas */}
             <button
               type="button"
               onClick={() => setActiveTab('canvas')}
-              className={`flex-1 min-w-[130px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+              className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
                 activeTab === 'canvas'
-                  ? 'bg-cyber-cyan text-obsidian-950 shadow-md'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'btn-tactile-emerald text-white shadow-lg'
+                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
               }`}
             >
-              <Edit3 className="w-4 h-4" />
-              <span>✍️ Bảng Viết Nét</span>
+              <span className="text-base mr-1.5">✍️</span>
+              <span>Luyện Viết Chữ</span>
             </button>
 
+            {/* Tab 4: Reader */}
             <button
               type="button"
               onClick={() => setActiveTab('reader')}
-              className={`flex-1 min-w-[145px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+              className={`flex-1 min-w-[150px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
                 activeTab === 'reader'
-                  ? 'bg-cyber-cyan text-obsidian-950 shadow-md font-extrabold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'btn-tactile-cyan text-white shadow-lg'
+                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
               }`}
             >
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>🔍 Khoanh Chữ Hỏi AI</span>
+              <span className="text-base mr-1.5">📖</span>
+              <span>Đọc &amp; Hỏi AI</span>
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-cyan-400/20 text-cyan-300 text-[9px] font-bold">
+                8 Bài
+              </span>
             </button>
 
+            {/* Tab 5: Pitch Studio */}
             <button
               type="button"
               onClick={() => setActiveTab('pitch')}
-              className={`flex-1 min-w-[130px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+              className={`flex-1 min-w-[140px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
                 activeTab === 'pitch'
-                  ? 'bg-cyber-cyan text-obsidian-950 shadow-md'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'btn-tactile-indigo text-white shadow-lg'
+                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
               }`}
             >
-              <Activity className="w-4 h-4" />
-              <span>🎙️ Luyện Thanh Điệu</span>
+              <span className="text-base mr-1.5">🎙️</span>
+              <span>Phòng Luyện Âm</span>
             </button>
 
+            {/* Tab 6: Dictionary */}
             <button
               type="button"
               onClick={() => setActiveTab('dictionary')}
-              className={`flex-1 min-w-[130px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+              className={`flex-1 min-w-[130px] btn-tactile py-2.5 px-3.5 text-xs font-black transition-all ${
                 activeTab === 'dictionary'
-                  ? 'bg-cyber-cyan text-obsidian-950 shadow-md'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'btn-tactile-cyan text-white shadow-lg'
+                  : 'bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-slate-800/50'
               }`}
             >
-              <BookOpen className="w-4 h-4" />
-              <span>📚 Từ Điển HSK</span>
+              <span className="text-base mr-1.5">📚</span>
+              <span>Từ Điển HSK</span>
             </button>
           </div>
         </section>

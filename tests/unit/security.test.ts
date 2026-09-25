@@ -19,6 +19,7 @@ import {
 } from '@/services/pdfTextExtractor';
 import { AnnotationService } from '@/services/annotationService';
 import { ProgressService } from '@/services/progressService';
+import { SrsService } from '@/services/srsService';
 
 describe('HanziVibe Enterprise Security Gate', () => {
   describe('1. OWASP A03: Injection & XSS Defense (escapeHtml & renderSafeMarkdownInline)', () => {
@@ -149,6 +150,39 @@ describe('HanziVibe Enterprise Security Gate', () => {
 
       // Memory cache is pruned to 500
       expect(service.getAnnotations().length).toBeLessThanOrEqual(500);
+    });
+
+    it('SrsService handles Safari Incognito SecurityError gracefully and keeps in-memory state', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      });
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      });
+
+      SrsService.resetInstance();
+      const service = SrsService.getInstance();
+      const cards = service.getAllCards();
+      expect(cards.length).toBeGreaterThan(0);
+
+      // Reviewing card in Safari Incognito does not throw
+      const reviewed = service.reviewCard(cards[0].id, 3);
+      expect(reviewed).not.toBeNull();
+      expect(reviewed?.repetition).toBe(1);
+    });
+
+    it('SrsService bounds card history to last 50 entries to prevent LocalStorage QuotaExceededError', () => {
+      const service = SrsService.getInstance();
+      const card = service.getAllCards()[0];
+
+      // Simulate 60 reviews
+      for (let i = 0; i < 60; i++) {
+        service.reviewCard(card.id, 3, `2026-09-${String((i % 28) + 1).padStart(2, '0')}`);
+      }
+
+      const updated = service.getAllCards().find((c) => c.id === card.id);
+      expect(updated).toBeDefined();
+      expect(updated!.history.length).toBeLessThanOrEqual(50);
     });
   });
 

@@ -238,7 +238,7 @@ export class SrsService {
       easeFactor: next.easeFactor,
       nextDueDate: next.nextDueDate,
       lastReviewedDate: today,
-      history: [...card.history, log],
+      history: [...card.history, log].slice(-50), // Bounded to prevent LocalStorage quota exhaustion
     };
 
     this.inMemoryCache[index] = updatedCard;

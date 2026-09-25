@@ -63,22 +63,22 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="py-2.5 px-4 sm:px-6 md:px-8 border-b border-slate-800/80 bg-obsidian-950/85 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between gap-3 shadow-sm transition-colors duration-200">
+    <header className="py-2.5 px-4 sm:px-6 md:px-8 border-b border-stone-200/80 dark:border-slate-800/80 bg-paper-50/85 dark:bg-obsidian-950/85 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between gap-3 shadow-sm transition-colors duration-200">
       {/* Brand Identity with Calligraphic Seal */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-emerald-500 p-0.5 shadow-md shadow-amber-500/20 shrink-0">
-          <div className="w-full h-full rounded-[14px] bg-obsidian-950 flex items-center justify-center">
-            <span className="text-xl font-serif font-black text-amber-400">韵</span>
+          <div className="w-full h-full rounded-[14px] bg-stone-50 dark:bg-obsidian-950 flex items-center justify-center transition-colors">
+            <span className="text-xl font-serif font-black text-amber-600 dark:text-amber-400">韵</span>
           </div>
         </div>
         <div>
           <h1 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
-            <span className="text-white drop-shadow-sm">HanziVibe</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold tracking-wide">
+            <span className="text-stone-900 dark:text-white drop-shadow-sm">HanziVibe</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold tracking-wide">
               汉字韵
             </span>
           </h1>
-          <p className="text-[11px] text-slate-400 hidden sm:block font-medium">
+          <p className="text-[11px] text-stone-500 dark:text-slate-400 hidden sm:block font-medium">
             Học Tiếng Trung Vui &amp; Nhớ Lâu ✨
           </p>
         </div>
@@ -167,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
           title="Hồ sơ & Huân chương thành tích"
           aria-label="Xem hồ sơ người dùng"
         >
-          <div className="w-full h-full rounded-[14px] bg-obsidian-950 flex items-center justify-center text-xs font-black text-amber-300">
+          <div className="w-full h-full rounded-[14px] bg-stone-100 dark:bg-obsidian-950 flex items-center justify-center text-xs font-black text-amber-700 dark:text-amber-300 transition-colors">
             {profile.displayName.charAt(0).toUpperCase() || 'H'}
           </div>
         </button>

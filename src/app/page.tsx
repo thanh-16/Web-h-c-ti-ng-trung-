@@ -15,6 +15,7 @@ import { InteractiveReaderStudio } from '@/components/reading';
 import { TimeAttackBattle } from '@/components/battle';
 import { srsService } from '@/services/srsService';
 import { progressService } from '@/services/progressService';
+import { Tilt3DCard, ParallaxCalligraphyCanvas } from '@/components/ui';
 import {
   Layers,
   Edit3,
@@ -95,7 +96,10 @@ export default function HomePage() {
   });
 
   return (
-    <div className="min-h-screen bg-obsidian-950 text-slate-100 flex flex-col font-sans pb-safe">
+    <div className="min-h-screen bg-paper-50 dark:bg-obsidian-950 text-stone-900 dark:text-slate-100 flex flex-col font-sans pb-safe relative overflow-x-hidden transition-colors duration-200">
+      {/* 3D Parallax Floating Calligraphy & Dust Canvas */}
+      <ParallaxCalligraphyCanvas className="fixed inset-0 pointer-events-none z-0" />
+
       {/* Top Fixed Header with Brand, Streak & Modals Trigger */}
       <Header
         audioUnlocked={audioUnlocked}
@@ -105,97 +109,147 @@ export default function HomePage() {
       />
 
       {/* Main Studio Container */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 flex flex-col">
-        {/* 1. Gamified Quest & Motivation Hero Dashboard */}
+      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 flex flex-col">
+        {/* 1. Gamified Quest & Motivation Hero Dashboard with 3D Holographic Seal */}
         <section className="mb-6">
-          <div className="p-5 sm:p-7 rounded-3xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-emerald-500/10 border border-amber-500/30 relative overflow-hidden shadow-xl transition-all">
-            {/* Subtle Calligraphic Seal Background Motif */}
-            <div className="absolute right-4 -bottom-6 text-9xl font-serif font-black text-amber-500/5 pointer-events-none select-none">
+          <div className="p-5 sm:p-7 rounded-3xl bg-white/80 dark:bg-obsidian-900/60 border border-stone-200/90 dark:border-amber-500/30 relative overflow-hidden shadow-xl backdrop-blur-md transition-all">
+            {/* Subtle Calligraphic Background Motif */}
+            <div className="absolute right-4 -bottom-6 text-9xl font-serif font-black text-amber-500/5 dark:text-amber-500/5 pointer-events-none select-none">
               学
             </div>
 
             <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-400 text-xs font-black mb-3 shadow-sm">
-                  <Flame className="w-3.5 h-3.5 fill-amber-400 text-orange-500 animate-flame-glow" />
+              <div className="max-w-xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs font-black mb-3 shadow-sm">
+                  <Flame className="w-3.5 h-3.5 fill-amber-500 text-orange-500 animate-flame-glow" />
                   <span>Cùng Chinh Phục Tiếng Trung Mỗi Ngày!</span>
                 </div>
 
-                <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight leading-tight">
-                  Chào bạn! 👋 Hôm nay cùng giữ chuỗi lửa <span className="text-amber-400">Streak {progressService.getProfile().streakDays} Ngày</span> nhé!
+                <h2 className="text-xl sm:text-3xl font-black text-stone-900 dark:text-white tracking-tight leading-tight">
+                  Chào bạn! 👋 Hôm nay cùng giữ chuỗi lửa <span className="text-amber-500 dark:text-amber-400">Streak {progressService.getProfile().streakDays} Ngày</span> nhé!
                 </h2>
 
-                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+                <p className="text-xs sm:text-sm text-stone-600 dark:text-slate-300 mt-2 leading-relaxed">
                   Luyện phát âm 4 thanh điệu chuẩn như người bản xứ, viết nét thư pháp bằng cảm ứng và nhớ từ vựng thần tốc qua đòn bẩy Hán - Việt.
                 </p>
 
                 {/* Daily Quest Mini Tracker */}
                 <div className="mt-4 flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-obsidian-950/70 border border-slate-700/80 text-xs font-bold text-slate-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-100/90 dark:bg-obsidian-950/70 border border-stone-200 dark:border-slate-700/80 text-xs font-bold text-stone-800 dark:text-slate-200 shadow-sm">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                     <span>Thẻ Flashcard: {srsDueCount > 0 ? `${srsDueCount} từ cần ôn` : 'Đã hoàn thành! ✨'}</span>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-obsidian-950/70 border border-slate-700/80 text-xs font-bold text-slate-200">
-                    <Trophy className="w-4 h-4 text-amber-400" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-100/90 dark:bg-obsidian-950/70 border border-stone-200 dark:border-slate-700/80 text-xs font-bold text-stone-800 dark:text-slate-200 shadow-sm">
+                    <Trophy className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                     <span>Vốn từ: {progressService.getProfile().masteredWordIds.length} chữ vững vàng</span>
                   </div>
                 </div>
               </div>
 
-              {/* Quick Adventure Launchers (Tactile 3D Buttons) */}
+              {/* 3D Holographic Character Seal (Interactive Depth Relief) */}
+              <div className="hidden xl:flex items-center justify-center">
+                <Tilt3DCard
+                  depth={24}
+                  maxTiltAngle={15}
+                  glareOpacity={0.25}
+                  className="rounded-3xl shadow-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-emerald-500/10 p-4"
+                >
+                  <div
+                    className="flex flex-col items-center justify-center w-36 h-36 relative select-none cursor-pointer"
+                    style={{ transformStyle: 'preserve-3d' }}
+                    onClick={() => handlePlayTTS(activeChar)}
+                    title="Nhấn để nghe phát âm chữ Hán 3D"
+                  >
+                    {/* Background Calligraphic Red Seal Stamp */}
+                    <div
+                      className="absolute inset-2 rounded-2xl border-2 border-dashed border-red-500/30 bg-red-500/5 flex items-center justify-center transition-transform"
+                      style={{ transform: 'translateZ(10px)' }}
+                    >
+                      <span className="text-[10px] font-bold text-red-400/60 uppercase tracking-widest">HanziVibe</span>
+                    </div>
+
+                    {/* Giant 3D Hanzi Glyph */}
+                    <span
+                      className="text-6xl font-serif font-black text-amber-500 dark:text-amber-400 drop-shadow-[0_8px_16px_rgba(245,158,11,0.35)] transition-transform"
+                      style={{ transform: 'translateZ(32px)' }}
+                    >
+                      {activeChar}
+                    </span>
+
+                    {/* Floating Pinyin & Meaning Tag */}
+                    <div
+                      className="mt-2 px-2.5 py-0.5 rounded-full bg-stone-900/80 dark:bg-obsidian-950/90 border border-amber-400/40 text-[10px] font-mono font-bold text-amber-300 shadow-md transition-transform flex items-center gap-1"
+                      style={{ transform: 'translateZ(44px)' }}
+                    >
+                      <span>{selectedWord.pinyin}</span>
+                      <Volume2 className="w-2.5 h-2.5 text-amber-400" />
+                    </div>
+                  </div>
+                </Tilt3DCard>
+              </div>
+
+              {/* Quick Adventure Launchers (3D Parallax Tilt Buttons) */}
               <div className="grid grid-cols-2 gap-2.5 sm:gap-3 shrink-0 lg:max-w-sm w-full">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('flashcard')}
-                  className="btn-tactile btn-tactile-amber p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
-                >
-                  <span className="text-2xl group-hover:scale-110 transition-transform">🎴</span>
-                  <span className="text-xs font-black text-white">Ôn Flashcard</span>
-                  <span className="text-[10px] text-amber-100 font-medium">Lật thẻ nhớ lâu</span>
-                </button>
+                <Tilt3DCard depth={12} maxTiltAngle={10} className="h-full">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('flashcard')}
+                    className="w-full h-full btn-tactile btn-tactile-amber p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
+                  >
+                    <span className="text-2xl group-hover:scale-110 transition-transform">🎴</span>
+                    <span className="text-xs font-black text-white">Ôn Flashcard</span>
+                    <span className="text-[10px] text-amber-100 font-medium">Lật thẻ nhớ lâu</span>
+                  </button>
+                </Tilt3DCard>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('battle')}
-                  className="btn-tactile btn-tactile-coral p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
-                >
-                  <span className="text-2xl group-hover:scale-110 transition-transform">⚡</span>
-                  <span className="text-xs font-black text-white">Đấu Trường 60s</span>
-                  <span className="text-[10px] text-rose-100 font-medium">Đua phản xạ nhanh</span>
-                </button>
+                <Tilt3DCard depth={12} maxTiltAngle={10} className="h-full">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('battle')}
+                    className="w-full h-full btn-tactile btn-tactile-coral p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
+                  >
+                    <span className="text-2xl group-hover:scale-110 transition-transform">⚡</span>
+                    <span className="text-xs font-black text-white">Đấu Trường 60s</span>
+                    <span className="text-[10px] text-rose-100 font-medium">Đua phản xạ nhanh</span>
+                  </button>
+                </Tilt3DCard>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('canvas')}
-                  className="btn-tactile btn-tactile-emerald p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
-                >
-                  <span className="text-2xl group-hover:scale-110 transition-transform">✍️</span>
-                  <span className="text-xs font-black text-white">Luyện Viết Chữ</span>
-                  <span className="text-[10px] text-emerald-100 font-medium">Bút thuận cảm ứng</span>
-                </button>
+                <Tilt3DCard depth={12} maxTiltAngle={10} className="h-full">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('canvas')}
+                    className="w-full h-full btn-tactile btn-tactile-emerald p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
+                  >
+                    <span className="text-2xl group-hover:scale-110 transition-transform">✍️</span>
+                    <span className="text-xs font-black text-white">Luyện Viết Chữ</span>
+                    <span className="text-[10px] text-emerald-100 font-medium">Bút thuận cảm ứng</span>
+                  </button>
+                </Tilt3DCard>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('reader')}
-                  className="btn-tactile btn-tactile-cyan p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
-                >
-                  <span className="text-2xl group-hover:scale-110 transition-transform">🔍</span>
-                  <span className="text-xs font-black text-white">Khoanh Hỏi AI</span>
-                  <span className="text-[10px] text-cyan-100 font-medium">8 bài học HSK</span>
-                </button>
+                <Tilt3DCard depth={12} maxTiltAngle={10} className="h-full">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('reader')}
+                    className="w-full h-full btn-tactile btn-tactile-cyan p-3.5 flex flex-col items-start gap-1 text-left rounded-2xl shadow-md group"
+                  >
+                    <span className="text-2xl group-hover:scale-110 transition-transform">🔍</span>
+                    <span className="text-xs font-black text-white">Khoanh Hỏi AI</span>
+                    <span className="text-[10px] text-cyan-100 font-medium">8 bài học HSK</span>
+                  </button>
+                </Tilt3DCard>
               </div>
             </div>
           </div>
         </section>
 
-        {/* 2. 4 Cung Bậc Thanh Điệu 🎵 (Melodic Tone Soundboard) */}
+        {/* 2. 4 Cung Bậc Thanh Điệu 🎵 (Melodic Tone Soundboard with 3D Tilt Cards) */}
         <section className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-amber-400" />
+            <h3 className="text-xs font-black text-stone-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-amber-500 dark:text-amber-400" />
               <span>4 Cung Bậc Thanh Điệu 🎵 — Chạm để nghe nhạc điệu tiếng Trung</span>
             </h3>
-            <span className="text-[11px] text-slate-400 font-bold hidden sm:inline">
+            <span className="text-[11px] text-stone-500 dark:text-slate-400 font-bold hidden sm:inline">
               Mô hình chuẩn Ngữ Điệu Bản Xứ
             </span>
           </div>
@@ -208,52 +262,54 @@ export default function HomePage() {
                   symbol: '―',
                   desc: 'Bay bổng 🕊️',
                   tip: 'Âm cao đều, ngân vang',
-                  bg: 'bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/40 text-cyan-400',
+                  bg: 'bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/40 text-cyan-600 dark:text-cyan-400',
                 },
                 2: {
                   name: 'Thanh 2: Lên Dốc',
                   symbol: '↗',
                   desc: 'Vút cao 🚀',
                   tip: 'Trầm vút lên như câu hỏi',
-                  bg: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-400',
+                  bg: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-600 dark:text-amber-400',
                 },
                 3: {
                   name: 'Thanh 3: Uốn Lượn',
                   symbol: '⤹↗',
                   desc: 'Sóng nước 🌊',
                   tip: 'Hạ trầm sâu rồi vút lên',
-                  bg: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/40 text-emerald-400',
+                  bg: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/40 text-emerald-600 dark:text-emerald-400',
                 },
                 4: {
                   name: 'Thanh 4: Dứt Khoát',
                   symbol: '↘',
                   desc: 'Rơi dốc ⚡',
                   tip: 'Rơi mạnh và dứt khoát',
-                  bg: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/40 text-red-400',
+                  bg: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/40 text-red-600 dark:text-red-400',
                 },
               }[toneNum];
 
               return (
-                <button
-                  key={toneNum}
-                  onClick={() => handlePlayTone(toneNum)}
-                  className={`card-tactile p-4 text-left transition-all border ${toneMeta.bg} ${
-                    playingTone === toneNum ? 'scale-95 shadow-xl ring-2 ring-white/50' : 'hover:-translate-y-1'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-2xl font-black font-mono">{toneMeta.symbol}</span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-obsidian-950/80 border border-slate-700 font-bold">
-                      {toneMeta.desc}
-                    </span>
-                  </div>
-                  <div className="text-xs font-black text-white">{toneMeta.name}</div>
-                  <div className="text-[11px] opacity-80 mt-0.5">{toneMeta.tip}</div>
-                  <div className="mt-2 text-[10px] font-bold text-cyber-cyan flex items-center gap-1">
-                    <Volume2 className="w-3 h-3" />
-                    <span>Chạm nghe âm mẫu</span>
-                  </div>
-                </button>
+                <Tilt3DCard key={toneNum} depth={18} maxTiltAngle={12} className="h-full">
+                  <button
+                    type="button"
+                    onClick={() => handlePlayTone(toneNum)}
+                    className={`w-full h-full card-tactile p-4 text-left transition-all border ${toneMeta.bg} bg-white/90 dark:bg-obsidian-900/80 shadow-md ${
+                      playingTone === toneNum ? 'scale-95 shadow-xl ring-2 ring-amber-400/50' : 'hover:-translate-y-1'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-2xl font-black font-mono">{toneMeta.symbol}</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-stone-100 dark:bg-obsidian-950/80 border border-stone-200 dark:border-slate-700 font-bold text-stone-700 dark:text-slate-300">
+                        {toneMeta.desc}
+                      </span>
+                    </div>
+                    <div className="text-xs font-black text-stone-900 dark:text-white">{toneMeta.name}</div>
+                    <div className="text-[11px] opacity-80 mt-0.5 text-stone-600 dark:text-slate-300">{toneMeta.tip}</div>
+                    <div className="mt-2 text-[10px] font-bold text-cyber-cyan flex items-center gap-1">
+                      <Volume2 className="w-3 h-3" />
+                      <span>Chạm nghe âm mẫu</span>
+                    </div>
+                  </button>
+                </Tilt3DCard>
               );
             })}
           </div>
@@ -261,7 +317,7 @@ export default function HomePage() {
 
         {/* 3. Chunky Tactile 3D Navigation Tabs (Duolingo Style) */}
         <section className="mb-6">
-          <div className="flex items-center gap-2 p-1.5 bg-obsidian-900/90 rounded-2xl border border-slate-800 shadow-md overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-2 p-1.5 bg-stone-100/90 dark:bg-obsidian-900/90 rounded-2xl border border-stone-200 dark:border-slate-800 shadow-md overflow-x-auto scrollbar-none">
             {/* Tab 1: Flashcard */}
             <button
               type="button"

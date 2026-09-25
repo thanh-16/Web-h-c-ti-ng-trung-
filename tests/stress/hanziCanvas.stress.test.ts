@@ -55,6 +55,8 @@ const createMockWriterInstance = () => {
     resumeAnimation: vi.fn().mockResolvedValue(undefined),
     highlightStroke: vi.fn().mockResolvedValue({ canceled: false }),
     showCharacter: vi.fn().mockResolvedValue({ canceled: false }),
+    showOutline: vi.fn().mockResolvedValue(undefined),
+    hideOutline: vi.fn().mockResolvedValue(undefined),
     cancelQuiz: vi.fn(),
     getCharacterData: vi.fn().mockResolvedValue({
       strokes: ['stroke1', 'stroke2', 'stroke3', 'stroke4'],

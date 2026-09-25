@@ -23,6 +23,7 @@ export interface UseHanziWriterOptions {
   showHintAfterMisses?: number | false;
   acceptBackwardsStrokes?: boolean;
   soundEnabled?: boolean;
+  isMemoryMode?: boolean;
   onCorrectStroke?: (data: StrokeData) => void;
   onMistake?: (data: StrokeData, message: string) => void;
   onComplete?: (summary: { character: string; totalMistakes: number }) => void;
@@ -44,6 +45,7 @@ export interface UseHanziWriterReturn {
   feedbackType: 'info' | 'success' | 'warning' | 'error';
   speed: number;
   isMuted: boolean;
+  isMemoryMode: boolean;
   animate: () => Promise<void>;
   loopAnimate: () => Promise<void>;
   pauseAnimation: () => Promise<void>;
@@ -54,6 +56,7 @@ export interface UseHanziWriterReturn {
   showHint: () => void;
   resetBoard: () => Promise<void>;
   toggleMute: () => void;
+  toggleMemoryMode: (enable?: boolean) => void;
 }
 
 /**
@@ -90,6 +93,7 @@ export function useHanziWriter(
   const [feedbackType, setFeedbackType] = useState<'info' | 'success' | 'warning' | 'error'>('info');
   const [speed, setSpeedState] = useState<number>(options.strokeAnimationSpeed ?? 1.0);
   const [isMuted, setIsMuted] = useState<boolean>(!(options.soundEnabled ?? true));
+  const [isMemoryMode, setIsMemoryMode] = useState<boolean>(options.isMemoryMode ?? false);
 
   // Initialize or update character on writer
   useEffect(() => {
@@ -114,6 +118,11 @@ export function useHanziWriter(
         if (writerRef.current) {
           writerRef.current.cancelQuiz();
           await writerRef.current.setCharacter(targetChar);
+          if (isMemoryMode) {
+            writerRef.current.hideOutline();
+          } else {
+            writerRef.current.showOutline();
+          }
 
           const charData = await writerRef.current.getCharacterData();
           if (isMountedRef.current && !isCancelled) {
@@ -147,7 +156,7 @@ export function useHanziWriter(
           drawingColor: options.drawingColor ?? '#2563EB',
           strokeAnimationSpeed: options.strokeAnimationSpeed ?? 1.2,
           delayBetweenStrokes: options.delayBetweenStrokes ?? 250,
-          showOutline: true,
+          showOutline: !isMemoryMode,
           showCharacter: true,
           charDataLoader: resilientCharDataLoader,
           onLoadCharDataError: (err) => {
@@ -309,6 +318,24 @@ export function useHanziWriter(
     });
   }, []);
 
+  // Toggle Memory Mode (show/hide outline)
+  const toggleMemoryMode = useCallback((enable?: boolean) => {
+    setIsMemoryMode((prev) => {
+      const next = typeof enable === 'boolean' ? enable : !prev;
+      if (writerRef.current) {
+        if (next) {
+          writerRef.current.hideOutline();
+          setFeedbackMessage('Chế độ Thử thách trí nhớ: Nét mờ đã ẩn! Hãy tự nhớ và vẽ từng nét.');
+        } else {
+          writerRef.current.showOutline();
+          setFeedbackMessage('Chế độ Nét mờ: Đã hiển thị nét mờ hỗ trợ.');
+        }
+        setFeedbackType('info');
+      }
+      return next;
+    });
+  }, []);
+
   // Quiz controller
   const startQuiz = useCallback(() => {
     if (!writerRef.current) return;
@@ -317,8 +344,18 @@ export function useHanziWriter(
     setCurrentStroke(0);
     setMistakesOnStroke(0);
     setTotalMistakes(0);
-    setFeedbackMessage('Bắt đầu luyện viết! Hãy vẽ nét đầu tiên.');
+    setFeedbackMessage(
+      isMemoryMode
+        ? 'Thử thách trí nhớ: Nét mờ đã ẩn! Hãy tự nhớ và vẽ nét đầu tiên.'
+        : 'Bắt đầu luyện viết! Hãy vẽ nét đầu tiên.'
+    );
     setFeedbackType('info');
+
+    if (isMemoryMode) {
+      writerRef.current.hideOutline();
+    } else {
+      writerRef.current.showOutline();
+    }
 
     writerRef.current.quiz({
       leniency: optionsRef.current.leniency ?? 1.0,
@@ -385,7 +422,9 @@ export function useHanziWriter(
         setMode('idle');
         const congratsMsg =
           summary.totalMistakes === 0
-            ? `Xuất sắc! Bạn đã viết hoàn hảo chữ '${summary.character}' không mắc lỗi nào!`
+            ? (isMemoryMode
+                ? `🏆 ĐỈNH CAO! Bạn đã viết nhớ hoàn hảo chữ '${summary.character}' từ trí nhớ không cần nét mờ!`
+                : `Xuất sắc! Bạn đã viết hoàn hảo chữ '${summary.character}' không mắc lỗi nào!`)
             : `Hoàn thành chữ '${summary.character}' với ${summary.totalMistakes} lần sửa. Rất tốt!`;
 
         setFeedbackMessage(congratsMsg);
@@ -399,7 +438,7 @@ export function useHanziWriter(
         optionsRef.current.onComplete?.(summary);
       },
     });
-  }, [isMuted]);
+  }, [isMuted, isMemoryMode]);
 
   // Cancel Quiz
   const cancelQuiz = useCallback(() => {
@@ -438,6 +477,7 @@ export function useHanziWriter(
     feedbackType,
     speed,
     isMuted,
+    isMemoryMode,
     animate,
     loopAnimate,
     pauseAnimation,
@@ -448,6 +488,7 @@ export function useHanziWriter(
     showHint,
     resetBoard,
     toggleMute,
+    toggleMemoryMode,
   };
 }
 

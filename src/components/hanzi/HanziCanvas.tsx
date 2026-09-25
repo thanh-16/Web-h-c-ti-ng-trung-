@@ -30,6 +30,8 @@ export interface HanziCanvasProps {
   initialGridType?: 'tian' | 'mi';
   /** Stroke animation speed multiplier (0.5 to 2.0) */
   animationSpeed?: number;
+  /** Whether to start in blind memory mode (hide outline) */
+  initialMemoryMode?: boolean;
   /** Whether to show external control toolbar */
   showControls?: boolean;
   /** Callback fired on correct stroke */
@@ -60,6 +62,7 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
   size,
   initialGridType = 'mi',
   animationSpeed = 1.2,
+  initialMemoryMode = false,
   showControls = true,
   onCorrectStroke,
   onMistake,
@@ -114,6 +117,7 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
     feedbackType,
     speed,
     isMuted,
+    isMemoryMode,
     animate,
     loopAnimate,
     pauseAnimation,
@@ -124,10 +128,12 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
     showHint,
     resetBoard,
     toggleMute,
+    toggleMemoryMode,
   } = useHanziWriter(containerRef, {
     character,
     size: computedSize,
     strokeAnimationSpeed: animationSpeed,
+    isMemoryMode: initialMemoryMode,
     onCorrectStroke,
     onMistake,
     onComplete: onQuizComplete,
@@ -150,35 +156,74 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
             </div>
           </div>
 
-          {/* Grid Type Selector Toggle */}
-          <div className="flex items-center gap-1 bg-obsidian-950 p-1 rounded-lg border border-slate-800">
+          {/* Controls: Memory Mode & Grid Type */}
+          <div className="flex items-center gap-2">
+            {/* Memory Mode Toggle Button */}
             <button
               type="button"
-              onClick={() => setGridType('mi')}
-              data-testid="btn-grid-mi"
-              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
-                gridType === 'mi'
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
+              onClick={() => toggleMemoryMode()}
+              data-testid="btn-toggle-memory-mode"
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-all ${
+                isMemoryMode
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/10'
+                  : 'bg-obsidian-950 text-slate-400 border border-slate-800 hover:text-slate-200'
               }`}
-              title="Mễ tự cách (米字格) — 8 hướng cân đối"
+              title={isMemoryMode ? 'Chuyển sang chế độ nét mờ hỗ trợ' : 'Bật chế độ Thử thách trí nhớ (Ẩn nét mờ)'}
             >
-              米 Mễ
+              <Sparkles className={`w-3 h-3 ${isMemoryMode ? 'text-amber-400' : 'text-slate-400'}`} />
+              <span>{isMemoryMode ? '🧠 Viết nhớ' : '👁️ Nét mờ'}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setGridType('tian')}
-              data-testid="btn-grid-tian"
-              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
-                gridType === 'tian'
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="Điền tự cách (田字格) — 4 ô chuẩn"
-            >
-              田 Điền
-            </button>
+
+            {/* Grid Type Selector Toggle */}
+            <div className="flex items-center gap-1 bg-obsidian-950 p-1 rounded-lg border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setGridType('mi')}
+                data-testid="btn-grid-mi"
+                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                  gridType === 'mi'
+                    ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Mễ tự cách (米字格) — 8 hướng cân đối"
+              >
+                米 Mễ
+              </button>
+              <button
+                type="button"
+                onClick={() => setGridType('tian')}
+                data-testid="btn-grid-tian"
+                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                  gridType === 'tian'
+                    ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Điền tự cách (田字格) — 4 ô chuẩn"
+              >
+                田 Điền
+              </button>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* Memory Mode Notice Banner */}
+      {isMemoryMode && (
+        <div
+          data-testid="memory-mode-banner"
+          className="w-full px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between animate-fadeIn shadow-sm"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+            <span>Đang bật <strong>Thử thách trí nhớ</strong>: Nét mờ đã ẩn, hãy tự nhớ và vẽ chuẩn bút thuận!</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => toggleMemoryMode(false)}
+            className="underline text-amber-400 hover:text-amber-200 text-xs font-semibold cursor-pointer shrink-0 ml-2"
+          >
+            Hiện lại nét mờ
+          </button>
         </div>
       )}
 

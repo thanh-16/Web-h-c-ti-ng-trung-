@@ -5,7 +5,7 @@ import { HSK_CURRICULUM } from '@/data/hskCurriculum';
 import { HskWord } from '@/types/hsk';
 import { AudioContextManager } from '@/services/audioContext';
 import { SpeechService } from '@/services/speechService';
-import { HanziCanvas } from '@/components/hanzi';
+import { HanziCanvas, SentenceWritingStudio } from '@/components/hanzi';
 import { ToneStudio } from '@/components/pitch';
 import { FlashcardHub } from '@/components/flashcard';
 import { Header } from '@/components/layout';
@@ -29,6 +29,7 @@ type StudioTab = 'flashcard' | 'canvas' | 'pitch' | 'dictionary';
 export default function HomePage() {
   const [selectedWord, setSelectedWord] = useState<HskWord>(HSK_CURRICULUM[0]);
   const [activeTab, setActiveTab] = useState<StudioTab>('flashcard');
+  const [canvasSubMode, setCanvasSubMode] = useState<'single' | 'sentence'>('single');
   const [selectedCharIndex, setSelectedCharIndex] = useState(0);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [playingTone, setPlayingTone] = useState<number | null>(null);
@@ -221,68 +222,114 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* TAB 2: HanziWriter Interactive Stroke Canvas */}
+          {/* TAB 2: HanziWriter Interactive Stroke Canvas & Sentence Writing Studio */}
           {activeTab === 'canvas' && (
-            <div className="bg-obsidian-900 border border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center shadow-xl">
-              <div className="w-full flex items-center justify-between flex-wrap gap-3 pb-4 mb-4 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-2.5 py-1 rounded-md bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan font-bold">
-                    Từ đang chọn: {selectedWord.hanzi} ({selectedWord.pinyin})
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Âm Hán Việt: <strong className="text-amber-400">{selectedWord.sinoVietnamese}</strong>
-                  </span>
+            <div className="flex flex-col gap-6 w-full">
+              {/* Sub-mode Switcher: Chữ đơn vs Mẫu câu HSK 1 */}
+              <div className="flex items-center justify-between flex-wrap gap-3 p-2.5 bg-obsidian-900 border border-slate-800 rounded-2xl shadow-md">
+                <div className="flex items-center bg-obsidian-950 p-1 rounded-xl border border-slate-800 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setCanvasSubMode('single')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      canvasSubMode === 'single'
+                        ? 'bg-cyber-cyan text-obsidian-950 shadow-md font-extrabold'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Luyện chữ đơn HSK</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCanvasSubMode('sentence')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      canvasSubMode === 'sentence'
+                        ? 'bg-cyber-cyan text-obsidian-950 shadow-md font-extrabold'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Luyện viết mẫu câu HSK 1</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-400 text-obsidian-950 font-black uppercase">
+                      Mới
+                    </span>
+                  </button>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handlePlayTTS(selectedWord.hanzi)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
-                  >
-                    <Volume2 className="w-3.5 h-3.5 text-cyber-cyan" />
-                    <span>Nghe từ</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsAiOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyber-cyan/15 hover:bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/40 text-xs font-bold transition-colors"
-                  >
-                    <Bot className="w-3.5 h-3.5" />
-                    <span>Hỏi Gemini AI</span>
-                  </button>
+                <div className="text-xs text-slate-400 pr-2">
+                  {canvasSubMode === 'single'
+                    ? 'Luyện từng nét bút thuận, hỗ trợ viết nhớ ẩn nét mờ'
+                    : 'Luyện viết toàn bộ chữ trong câu để nhớ sâu từ Hán'}
                 </div>
               </div>
 
-              {/* Character Selector for multi-character words */}
-              {wordChars.length > 1 && (
-                <div className="flex items-center gap-2 p-1.5 bg-obsidian-950 rounded-2xl border border-slate-800 text-xs mb-4">
-                  <span className="text-slate-400 font-medium px-2">Chọn chữ luyện viết:</span>
-                  {wordChars.map((char, idx) => (
-                    <button
-                      key={char + idx}
-                      type="button"
-                      onClick={() => setSelectedCharIndex(idx)}
-                      className={`px-3.5 py-1.5 rounded-xl font-serif text-base font-bold transition-all ${
-                        selectedCharIndex === idx
-                          ? 'bg-cyber-cyan text-obsidian-950 shadow-md scale-105'
-                          : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
-                      }`}
-                    >
-                      {char}
-                    </button>
-                  ))}
+              {canvasSubMode === 'sentence' ? (
+                <SentenceWritingStudio />
+              ) : (
+                <div className="bg-obsidian-900 border border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center shadow-xl">
+                  <div className="w-full flex items-center justify-between flex-wrap gap-3 pb-4 mb-4 border-b border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-2.5 py-1 rounded-md bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan font-bold">
+                        Từ đang chọn: {selectedWord.hanzi} ({selectedWord.pinyin})
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        Âm Hán Việt: <strong className="text-amber-400">{selectedWord.sinoVietnamese}</strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handlePlayTTS(selectedWord.hanzi)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
+                      >
+                        <Volume2 className="w-3.5 h-3.5 text-cyber-cyan" />
+                        <span>Nghe từ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsAiOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyber-cyan/15 hover:bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/40 text-xs font-bold transition-colors"
+                      >
+                        <Bot className="w-3.5 h-3.5" />
+                        <span>Hỏi Gemini AI</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Character Selector for multi-character words */}
+                  {wordChars.length > 1 && (
+                    <div className="flex items-center gap-2 p-1.5 bg-obsidian-950 rounded-2xl border border-slate-800 text-xs mb-4">
+                      <span className="text-slate-400 font-medium px-2">Chọn chữ luyện viết:</span>
+                      {wordChars.map((char, idx) => (
+                        <button
+                          key={char + idx}
+                          type="button"
+                          onClick={() => setSelectedCharIndex(idx)}
+                          className={`px-3.5 py-1.5 rounded-xl font-serif text-base font-bold transition-all ${
+                            selectedCharIndex === idx
+                              ? 'bg-cyber-cyan text-obsidian-950 shadow-md scale-105'
+                              : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+                          }`}
+                        >
+                          {char}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* HanziWriter Canvas Engine Component */}
+                  <HanziCanvas
+                    character={activeChar}
+                    pinyin={selectedWord.pinyin}
+                    sinoVietnamese={selectedWord.sinoVietnamese}
+                    meaning={selectedWord.vietnameseMeaning}
+                  />
                 </div>
               )}
-
-              {/* HanziWriter Canvas Engine Component */}
-              <HanziCanvas
-                character={activeChar}
-                pinyin={selectedWord.pinyin}
-                sinoVietnamese={selectedWord.sinoVietnamese}
-                meaning={selectedWord.vietnameseMeaning}
-              />
             </div>
           )}
 

@@ -7,7 +7,15 @@
  */
 
 import { HskWord } from '@/types/hsk';
-import { GeminiPromptType, GeminiRequest, GeminiResponse } from '@/types/gemini';
+import {
+  GeminiPromptType,
+  GeminiRequest,
+  GeminiResponse,
+  CircleSearchRequest,
+  CircleSearchResult,
+} from '@/types/gemini';
+import { HSK_CURRICULUM } from '@/data/hskCurriculum';
+import { HSK1_SENTENCES } from '@/data/hskSentences';
 
 const GEMINI_MODEL = 'gemini-1.5-flash';
 const API_TIMEOUT_MS = 10000;
@@ -245,6 +253,287 @@ ${word.exampleSentence.sinoVietnamese ? `- **Âm Hán Việt:** *${word.exampleS
         isFallback: true,
         error: errorMessage,
       };
+    }
+  }
+
+  /**
+   * Helper to look up character metadata from our curriculum or sentence dataset
+   */
+  public findLocalWordOrChar(queryText: string): {
+    matchedWord?: HskWord;
+    charInfo?: { char: string; pinyin: string; sinoVietnamese: string; meaning: string };
+  } {
+    const trimmed = queryText.trim();
+    if (!trimmed) return {};
+
+    // 1. Exact match in HSK Curriculum
+    const exactWord = HSK_CURRICULUM.find((w) => w.hanzi === trimmed);
+    if (exactWord) {
+      return { matchedWord: exactWord };
+    }
+
+    // 2. Substring match (e.g. single character inside multi-char word)
+    if (trimmed.length === 1) {
+      const subWord = HSK_CURRICULUM.find((w) => w.hanzi.includes(trimmed));
+      if (subWord) {
+        return { matchedWord: subWord };
+      }
+    }
+
+    // 3. Match in HSK 1 Sentences character breakdown
+    for (const sent of HSK1_SENTENCES) {
+      const foundChar = sent.characters.find((c) => c.char === trimmed);
+      if (foundChar) {
+        return { charInfo: foundChar };
+      }
+    }
+
+    return {};
+  }
+
+  /**
+   * Builds pedagogical prompt specifically for Circle-to-Search queries
+   */
+  public buildCircleSearchPrompt(request: CircleSearchRequest): string {
+    const { queryText, contextSentence, promptMode = 'explain', customQuestion } = request;
+    const { matchedWord, charInfo } = this.findLocalWordOrChar(queryText);
+
+    const baseInfo = matchedWord
+      ? `Từ vựng HSK: '${matchedWord.hanzi}' (Pinyin: ${matchedWord.pinyin}, Hán Việt: ${matchedWord.sinoVietnamese}, Nghĩa: ${matchedWord.vietnameseMeaning}, Bộ thủ: ${matchedWord.radical})`
+      : charInfo
+      ? `Chữ Hán: '${charInfo.char}' (Pinyin: ${charInfo.pinyin}, Hán Việt: ${charInfo.sinoVietnamese}, Nghĩa: ${charInfo.meaning})`
+      : `Chữ/Từ Hán được khoanh: '${queryText}'`;
+
+    const contextPart = contextSentence
+      ? `\nNgữ cảnh trong câu người học đang đọc: "${contextSentence}".`
+      : '';
+
+    if (promptMode === 'custom' && customQuestion) {
+      return `Bạn là giảng viên Hán ngữ chuyên sâu tại HanziVibe.
+Người học vừa khoanh tròn chữ/từ: "${queryText}".${contextPart}
+Thông tin nền tảng: ${baseInfo}.
+Câu hỏi cụ thể của người học: "${customQuestion}".
+Hãy giải đáp chi tiết, súc tích, mang tính sư phạm và dễ hiểu bằng tiếng Việt có định dạng Markdown chuẩn.`;
+    }
+
+    if (promptMode === 'etymology') {
+      return `Bạn là chuyên gia chiết tự và cổ văn học Hán ngữ tại HanziVibe.
+Người học vừa khoanh tròn chữ/từ: "${queryText}".${contextPart}
+Thông tin: ${baseInfo}.
+Hãy phân tích sâu về:
+1. Bộ thủ và cấu tạo các nét (hội ý, tượng hình, hình thanh).
+2. Nguồn gốc hình thành từ tự hình cổ (Giáp cốt văn/Kim văn).
+3. Triết lý văn hóa ẩn chứa trong chữ.
+Trình bày bằng tiếng Việt Markdown chuẩn mực và cuốn hút.`;
+    }
+
+    if (promptMode === 'mnemonic') {
+      return `Bạn là bậc thầy ghi nhớ chữ Hán qua đòn bẩy ngữ âm Hán - Việt tại HanziVibe.
+Người học vừa khoanh tròn chữ/từ: "${queryText}".${contextPart}
+Thông tin: ${baseInfo}.
+Hãy cung cấp:
+1. Đòn bẩy âm Hán Việt tương đồng trong tiếng Việt hiện đại.
+2. Câu chuyện liên tưởng hài hước, hình ảnh hóa để nhìn mặt chữ là nhớ ngay.
+3. 2-3 từ ghép thông dụng nhất có chứa chữ này.
+Trình bày bằng tiếng Việt Markdown súc tích.`;
+    }
+
+    if (promptMode === 'sentences') {
+      return `Bạn là giáo viên bản xứ tiếng Trung tại HanziVibe.
+Người học vừa khoanh tròn chữ/từ: "${queryText}".${contextPart}
+Thông tin: ${baseInfo}.
+Hãy tạo 3 câu ví dụ giao tiếp thực tế đời thường có chứa từ "${queryText}".
+Định dạng mỗi câu chuẩn xác gồm 3 dòng:
+1. Chữ Hán
+2. Pinyin có dấu thanh điệu chuẩn
+3. Dịch nghĩa tiếng Việt tự nhiên và phong phú.`;
+    }
+
+    // Default 'explain' mode:
+    return `Bạn là trợ lý AI thông minh về ngôn ngữ tiếng Trung của HanziVibe.
+Người học vừa KHOANH TRÒN chữ/từ: "${queryText}".${contextPart}
+Thông tin gợi ý: ${baseInfo}.
+
+Hãy giải thích toàn diện bằng tiếng Việt Markdown theo bố cục sau:
+### 1. Thông Tin Ngữ Âm & Ý Nghĩa
+- **Pinyin:** [Pinyin kèm thanh điệu]
+- **Âm Hán Việt:** [Âm Hán Việt in hoa]
+- **Ý nghĩa cốt lõi:** [Nghĩa tiếng Việt]
+- **Ý nghĩa trong ngữ cảnh vừa khoanh:** [Giải thích sắc thái trong câu nếu có câu ngữ cảnh]
+
+### 2. Cấu Tạo & Bộ Thủ
+- Bộ thủ chính, số nét và cách nhận diện.
+
+### 3. Mẹo Nhớ Đòn Bẩy Hán - Việt
+- Một mẹo liên tưởng ngắn gọn giúp nhớ ngay mặt chữ.
+
+### 4. Ví Dụ Ứng Dụng Nhanh
+- 1-2 cụm từ hoặc câu ví dụ ngắn gọn, gần gũi.`;
+  }
+
+  /**
+   * Generates genuine pedagogical fallback for Circle-to-Search queries
+   */
+  public generateCircleSearchFallback(request: CircleSearchRequest): CircleSearchResult {
+    const { queryText, contextSentence, promptMode = 'explain' } = request;
+    const { matchedWord, charInfo } = this.findLocalWordOrChar(queryText);
+
+    const pinyin = matchedWord?.pinyin || charInfo?.pinyin || 'Xem chi tiết bên dưới';
+    const sinoVietnamese = matchedWord?.sinoVietnamese || charInfo?.sinoVietnamese || 'HÁN VIỆT';
+    const vietnameseMeaning = matchedWord?.vietnameseMeaning || charInfo?.meaning || 'Từ tiếng Trung được khoanh';
+
+    let explanation = '';
+
+    if (matchedWord) {
+      if (promptMode === 'etymology') {
+        explanation = this.generatePedagogicalFallback(matchedWord, 'etymology');
+      } else if (promptMode === 'mnemonic') {
+        explanation = this.generatePedagogicalFallback(matchedWord, 'mnemonic');
+      } else if (promptMode === 'sentences') {
+        explanation = this.generatePedagogicalFallback(matchedWord, 'sentences');
+      } else {
+        explanation = `### 🔍 Phân Tích Chữ Được Khoanh: **${matchedWord.hanzi}** (${matchedWord.sinoVietnamese})
+
+- **Pinyin:** \`${matchedWord.pinyin}\` (Thanh ${matchedWord.tone})
+- **Âm Hán Việt:** **${matchedWord.sinoVietnamese}**
+- **Nghĩa tiếng Việt:** ${matchedWord.vietnameseMeaning}
+- **Bộ thủ:** \`${matchedWord.radical}\` (${matchedWord.radicalMeaning}) — Gồm ${matchedWord.strokeCount} nét.
+${contextSentence ? `- **Ngữ cảnh câu:** *"${contextSentence}"*` : ''}
+
+#### 💡 Mẹo Nhớ Đòn Bẩy Hán - Việt:
+${matchedWord.mnemonic ? `> **"${matchedWord.mnemonic}"**` : `> Nhìn bộ thủ \`${matchedWord.radical}\` liên hệ với âm Hán Việt **${matchedWord.sinoVietnamese}** để nhớ lâu.`}
+
+#### 🏛️ Chiết Tự Cổ Văn:
+${matchedWord.decomposition || `Chữ ${matchedWord.hanzi} có kết cấu hài hòa giữa yếu tố hình thái và ngữ nghĩa.`}
+
+#### 💬 Câu Ví Dụ Ngữ Cảnh:
+- **Chữ Hán:** ${matchedWord.exampleSentence.chinese}
+- **Pinyin:** *${matchedWord.exampleSentence.pinyin}*
+- **Tiếng Việt:** ${matchedWord.exampleSentence.vietnamese}`;
+      }
+    } else if (charInfo) {
+      explanation = `### 🔍 Phân Tích Chữ Được Khoanh: **${charInfo.char}** (${charInfo.sinoVietnamese})
+
+- **Pinyin:** \`${charInfo.pinyin}\`
+- **Âm Hán Việt:** **${charInfo.sinoVietnamese}**
+- **Nghĩa tiếng Việt:** ${charInfo.meaning}
+${contextSentence ? `- **Ngữ cảnh trong câu:** *"${contextSentence}"*` : ''}
+
+#### 💡 Mẹo Nhớ Hán - Việt:
+- Chữ **${charInfo.char}** có âm Hán Việt là **${charInfo.sinoVietnamese}**. Người Việt dùng từ này rất quen thuộc trong đời sống hàng ngày!
+- Nắm vững âm Hán Việt giúp bạn dễ dàng đọc hiểu và liên hệ với các từ ghép mở rộng trong tiếng Trung mà không cần học vẹt.`;
+    } else {
+      explanation = `### 🔍 Tra Cứu Chữ Được Khoanh: **${queryText}**
+
+- **Ký tự tra cứu:** ${queryText}
+${contextSentence ? `- **Ngữ cảnh xuất hiện:** *"${contextSentence}"*` : ''}
+
+#### 📚 Hướng Dẫn Sư Phạm:
+- Đây là một chữ/từ vựng tiếng Trung xuất hiện trong bài đọc.
+- Bạn có thể chuyển sang chế độ **"Hỏi AI tùy chỉnh"** để đặt câu hỏi cụ thể, hoặc kết nối mạng để trợ lý Gemini AI phân tích chiết tự và ngữ nghĩa chi tiết nhất!`;
+    }
+
+    return {
+      queryText,
+      matchedWord,
+      pinyin,
+      sinoVietnamese,
+      vietnameseMeaning,
+      aiExplanation: explanation,
+      isFallback: true,
+    };
+  }
+
+  /**
+   * Queries Gemini AI or local pedagogical engine for an arbitrary circled word/character
+   */
+  public async queryUnknownWord(request: CircleSearchRequest): Promise<CircleSearchResult> {
+    const { queryText, contextSentence, promptMode = 'explain', customQuestion } = request;
+    const cacheKey = `circle_${queryText}_${promptMode}_${customQuestion || ''}_${contextSentence || ''}`;
+
+    const { matchedWord, charInfo } = this.findLocalWordOrChar(queryText);
+    const pinyin = matchedWord?.pinyin || charInfo?.pinyin;
+    const sinoVietnamese = matchedWord?.sinoVietnamese || charInfo?.sinoVietnamese;
+    const vietnameseMeaning = matchedWord?.vietnameseMeaning || charInfo?.meaning;
+
+    if (this.cache.has(cacheKey)) {
+      return {
+        queryText,
+        matchedWord,
+        pinyin,
+        sinoVietnamese,
+        vietnameseMeaning,
+        aiExplanation: this.cache.get(cacheKey)!,
+        isFallback: false,
+        cached: true,
+      };
+    }
+
+    const key = this.apiKey.trim();
+    if (!key) {
+      return this.generateCircleSearchFallback(request);
+    }
+
+    const prompt = this.buildCircleSearchPrompt(request);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(
+        key
+      )}`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 800,
+          },
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Gemini API HTTP Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!generatedText || typeof generatedText !== 'string') {
+        throw new Error('Invalid or empty response format from Gemini API');
+      }
+
+      this.cache.set(cacheKey, generatedText);
+
+      return {
+        queryText,
+        matchedWord,
+        pinyin,
+        sinoVietnamese,
+        vietnameseMeaning,
+        aiExplanation: generatedText,
+        isFallback: false,
+      };
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.warn('[GeminiAiService] Circle query failed, switching to pedagogical fallback:', errorMessage);
+
+      const fallback = this.generateCircleSearchFallback(request);
+      fallback.error = errorMessage;
+      return fallback;
     }
   }
 }

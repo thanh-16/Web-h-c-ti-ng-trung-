@@ -25,3 +25,25 @@ export interface GeminiModelConfig {
   model: string;
   timeoutMs: number;
 }
+
+export type CircleSearchPromptMode = 'explain' | 'etymology' | 'mnemonic' | 'sentences' | 'custom';
+
+export interface CircleSearchRequest {
+  queryText: string;
+  contextSentence?: string;
+  promptMode?: CircleSearchPromptMode;
+  customQuestion?: string;
+}
+
+export interface CircleSearchResult {
+  queryText: string;
+  matchedWord?: HskWord;
+  pinyin?: string;
+  sinoVietnamese?: string;
+  vietnameseMeaning?: string;
+  aiExplanation: string;
+  isFallback: boolean;
+  cached?: boolean;
+  error?: string;
+}
+

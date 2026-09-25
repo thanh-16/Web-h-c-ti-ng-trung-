@@ -11,6 +11,7 @@ import { FlashcardHub } from '@/components/flashcard';
 import { Header } from '@/components/layout';
 import { UserProfileModal } from '@/components/auth';
 import { GeminiAiModal } from '@/components/ai';
+import { InteractiveReaderStudio } from '@/components/reading';
 import {
   Layers,
   Edit3,
@@ -24,7 +25,7 @@ import {
   Mic,
 } from 'lucide-react';
 
-type StudioTab = 'flashcard' | 'canvas' | 'pitch' | 'dictionary';
+type StudioTab = 'flashcard' | 'canvas' | 'reader' | 'pitch' | 'dictionary';
 
 export default function HomePage() {
   const [selectedWord, setSelectedWord] = useState<HskWord>(HSK_CURRICULUM[0]);
@@ -180,6 +181,19 @@ export default function HomePage() {
 
             <button
               type="button"
+              onClick={() => setActiveTab('reader')}
+              className={`flex-1 min-w-[145px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+                activeTab === 'reader'
+                  ? 'bg-cyber-cyan text-obsidian-950 shadow-md font-extrabold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>🔍 Khoanh Chữ Hỏi AI</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab('pitch')}
               className={`flex-1 min-w-[130px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
                 activeTab === 'pitch'
@@ -330,6 +344,21 @@ export default function HomePage() {
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB: Interactive Reader Studio & Circle-to-Search AI */}
+          {activeTab === 'reader' && (
+            <div className="bg-obsidian-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xl">
+              <InteractiveReaderStudio
+                onPracticeCharacter={(char, matched) => {
+                  if (matched) {
+                    setSelectedWord(matched);
+                  }
+                  setActiveTab('canvas');
+                  setCanvasSubMode('single');
+                }}
+              />
             </div>
           )}
 

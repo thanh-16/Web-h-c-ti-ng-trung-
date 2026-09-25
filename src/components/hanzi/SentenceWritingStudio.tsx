@@ -20,7 +20,10 @@ import {
   Play,
   ArrowRight,
   Award,
+  Bot,
 } from 'lucide-react';
+import { CircleToSearchModal, CircleToSearchOverlay } from '@/components/ai';
+import { HskWord } from '@/types/hsk';
 
 interface SentenceWritingStudioProps {
   initialSentenceId?: string;
@@ -65,6 +68,23 @@ export const SentenceWritingStudio: React.FC<SentenceWritingStudioProps> = ({
 
   // Show sentence victory banner
   const [isSentenceFinished, setIsSentenceFinished] = useState<boolean>(false);
+
+  // Circle to Search AI state
+  const [isCircleModalOpen, setIsCircleModalOpen] = useState<boolean>(false);
+  const [circledText, setCircledText] = useState<string>('');
+  const [isCircleOverlayActive, setIsCircleOverlayActive] = useState<boolean>(false);
+
+  const handleWordCircled = (word: string) => {
+    setCircledText(word);
+    setIsCircleModalOpen(true);
+  };
+
+  const handlePracticeCircledChar = (char: string) => {
+    const idx = currentSentence.characters.findIndex((c) => c.char === char);
+    if (idx >= 0) {
+      setActiveCharIndex(idx);
+    }
+  };
 
   // Current active character
   const activeCharData: HskSentenceChar =
@@ -252,18 +272,46 @@ export const SentenceWritingStudio: React.FC<SentenceWritingStudioProps> = ({
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-semibold">
                   <span>{currentSentence.category}</span>
                 </div>
-                <h3 className="text-2xl sm:text-3xl font-extrabold font-serif text-white tracking-wide flex items-center gap-3">
+                <h3 className="text-2xl sm:text-3xl font-extrabold font-serif text-white tracking-wide flex items-center flex-wrap gap-2.5">
                   <span>{currentSentence.chinese}</span>
-                  <button
-                    type="button"
-                    onClick={handlePlaySentenceAudio}
-                    disabled={isPlayingAudio}
-                    className="p-2 rounded-xl bg-cyber-cyan/15 hover:bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/30 transition-all hover:scale-105"
-                    title="Phát âm thanh toàn bộ câu mẫu"
-                  >
-                    <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-bounce text-emerald-400' : ''}`} />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handlePlaySentenceAudio}
+                      disabled={isPlayingAudio}
+                      className="p-2 rounded-xl bg-cyber-cyan/15 hover:bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/30 transition-all hover:scale-105"
+                      title="Phát âm thanh toàn bộ câu mẫu"
+                    >
+                      <Volume2 className={`w-4 h-4 ${isPlayingAudio ? 'animate-bounce text-emerald-400' : ''}`} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsCircleOverlayActive((prev) => !prev)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ${
+                        isCircleOverlayActive
+                          ? 'bg-cyber-cyan text-obsidian-950 border-cyber-cyan shadow-md'
+                          : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
+                      }`}
+                      title="Dùng ngón tay/Apple Pencil khoanh tròn hoặc chạm vào từ không biết để hỏi AI"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{isCircleOverlayActive ? 'Đang bật khoanh chữ' : 'Khoanh chữ hỏi AI'}</span>
+                    </button>
+                  </div>
                 </h3>
+
+                {isCircleOverlayActive ? (
+                  <div className="my-3">
+                    <CircleToSearchOverlay
+                      sentenceText={currentSentence.chinese}
+                      pinyinText={currentSentence.pinyin}
+                      sinoVietnameseText={currentSentence.sinoVietnamese}
+                      vietnameseMeaning={currentSentence.vietnamese}
+                      onCircleWord={handleWordCircled}
+                    />
+                  </div>
+                ) : null}
                 <div className="text-sm font-semibold text-cyber-cyan font-mono">
                   {currentSentence.pinyin}
                 </div>
@@ -477,6 +525,15 @@ export const SentenceWritingStudio: React.FC<SentenceWritingStudioProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Circle to Search AI Modal */}
+      <CircleToSearchModal
+        isOpen={isCircleModalOpen}
+        onClose={() => setIsCircleModalOpen(false)}
+        queryText={circledText}
+        contextSentence={currentSentence.chinese}
+        onPracticeCharacter={(char) => handlePracticeCircledChar(char)}
+      />
     </div>
   );
 };

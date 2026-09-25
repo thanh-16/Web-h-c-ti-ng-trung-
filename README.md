@@ -4,10 +4,10 @@
 [![React 19](https://img.shields.io/badge/React-19.0.0-blue?style=for-the-badge&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7.3-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.17-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-[![Tests](https://img.shields.io/badge/Tests-323%2F323%20Pass-10B981?style=for-the-badge&logo=vitest)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/Tests-358%2F358%20Pass-10B981?style=for-the-badge&logo=vitest)](https://vitest.dev/)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
-> **HanziVibe (汉字韵)** là giải pháp Web Application tiên phong kết hợp công nghệ âm thanh thời gian thực (Real-time Audio DSP), trí tuệ nhân tạo (Google Gemini AI), mô phỏng thư pháp SVG tương tác và phương pháp đòn bẩy ngữ âm **Hán - Việt**, mang lại trải nghiệm luyện phát âm chuẩn xác và viết chữ Hán sống động trên mọi thiết bị di động, tối ưu chuyên sâu cho **iPad Pro 12.9 inch** và **iPhone 12 Pro Max**.
+> **HanziVibe (汉字韵)** là giải pháp Web Application tiên phong kết hợp công nghệ âm thanh thời gian thực (Real-time Audio DSP), trí tuệ nhân tạo (Google Gemini AI), mô phỏng thư pháp SVG tương tác, thuật toán lặp lại ngắt quãng **SuperMemo SM-2**, Đấu trường 60s phản xạ và phương pháp đòn bẩy ngữ âm **Hán - Việt**, mang lại trải nghiệm luyện phát âm chuẩn xác và viết chữ Hán sống động trên mọi thiết bị di động, tối ưu chuyên sâu cho **iPad Pro 12.9 inch** và **iPhone 12 Pro Max**.
 
 ---
 
@@ -19,8 +19,9 @@ Học tiếng Trung truyền thống thường gặp hai rào cản lớn nhất
 
 **HanziVibe** giải quyết triệt để hai vấn đề này bằng cách:
 - Số hóa âm thanh qua thuật toán DSP **YIN**, vẽ biểu đồ cao độ $F_0$ trực tiếp so khớp với mô hình thanh điệu chuẩn Chao (5-level system).
-- Bảng luyện viết SVG độ nét cao với thuật toán nhận diện lỗi vẽ ngược nét (`isBackwards`), khóa cảm ứng chống chạm nhầm lòng bàn tay (Palm Rejection) cho Apple Pencil.
+- Bảng luyện viết SVG độ nét cao với thuật toán nhận diện lỗi vẽ ngược nét (`isBackwards`), chế độ **Giấy Trắng Tự Do (Freehand Blank Paper)** kiểm tra trí nhớ tuyệt đối, khóa cảm ứng chống chạm nhầm lòng bàn tay (Palm Rejection) cho Apple Pencil.
 - Tận dụng kho tàng hơn 60% từ vựng Hán - Việt giúp người Việt nắm bắt nghĩa và bản chất chữ Hán siêu tốc.
+- Thuật toán **SRS SuperMemo SM-2** lên lịch ôn tập ngắt quãng tự động và **Đấu Trường 60s (Time-Attack Battle)** tôi luyện phản xạ.
 
 ---
 
@@ -35,7 +36,7 @@ Học tiếng Trung truyền thống thường gặp hai rào cản lớn nhất
 | **Audio Processing** | **Web Audio API + YIN Algorithm** | Thuật toán YIN DSP thuần TypeScript giải mã tần số cơ bản $F_0$ trong <1ms, dải tần 80-450 Hz |
 | **Calligraphy Canvas**| **HanziWriter 3.7 (SVG Engine)** | Vẽ nét chữ vector không vỡ hạt trên màn hình Retina, nhận diện bút thuận và vẽ ngược hướng |
 | **AI Assistant** | **Google Gemini 1.5 Flash** | Giải mã chiết tự chữ Hán, mẹo nhớ ngữ âm Hán - Việt và sinh mẫu câu ngữ cảnh đàm thoại |
-| **Quality & Testing** | **Vitest 3.0 + JSDOM 26** | 23 tệp kiểm thử tự động, 323 bài test xác minh tính toàn vẹn và độ chịu tải |
+| **Quality & Testing** | **Vitest 3.0 + JSDOM 26** | 27 tệp kiểm thử tự động, 358 bài test xác minh tính toàn vẹn và độ chịu tải |
 
 ---
 

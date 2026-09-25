@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { StrokeData } from 'hanzi-writer';
 import { CalligraphyGrid } from './CalligraphyGrid';
 import { StrokeControls } from './StrokeControls';
 import { useHanziWriter, UseHanziWriterOptions } from '@/hooks/useHanziWriter';
+import { hanziAudio } from '@/services/hanziAudioFeedback';
 import {
   AlertTriangle,
   CheckCircle,
@@ -13,6 +14,9 @@ import {
   Grid,
   Sparkles,
   RotateCcw,
+  PenTool,
+  Eye,
+  CheckCheck,
 } from 'lucide-react';
 
 export interface HanziCanvasProps {
@@ -32,6 +36,8 @@ export interface HanziCanvasProps {
   animationSpeed?: number;
   /** Whether to start in blind memory mode (hide outline) */
   initialMemoryMode?: boolean;
+  /** Whether to start in freehand blank paper mode */
+  initialFreehandMode?: boolean;
   /** Whether to show external control toolbar */
   showControls?: boolean;
   /** Callback fired on correct stroke */
@@ -40,6 +46,8 @@ export interface HanziCanvasProps {
   onMistake?: (data: StrokeData, message: string) => void;
   /** Callback fired on quiz completion */
   onQuizComplete?: (summary: { character: string; totalMistakes: number }) => void;
+  /** Callback fired when user compares freehand drawing */
+  onFreehandCompare?: () => void;
   /** Additional custom class names */
   className?: string;
 }
@@ -63,14 +71,25 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
   initialGridType = 'mi',
   animationSpeed = 1.2,
   initialMemoryMode = false,
+  initialFreehandMode = false,
   showControls = true,
   onCorrectStroke,
   onMistake,
   onQuizComplete,
+  onFreehandCompare,
   className = '',
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [gridType, setGridType] = useState<'tian' | 'mi'>(initialGridType);
+
+  // Freehand Blank Paper Memory Challenge State
+  const [isFreehandMode, setIsFreehandMode] = useState<boolean>(initialFreehandMode);
+  const [hasFreehandStrokes, setHasFreehandStrokes] = useState<boolean>(false);
+  const [isComparing, setIsComparing] = useState<boolean>(false);
+
+  const freehandCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDrawingRef = useRef<boolean>(false);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
   // Responsive sizing: calculate appropriate square size based on screen viewport
   const [computedSize, setComputedSize] = useState<number>(size ?? 360);
@@ -139,6 +158,104 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
     onComplete: onQuizComplete,
   });
 
+  // Initialize and scale freehand canvas for Retina / high-DPI displays
+  useEffect(() => {
+    const canvas = freehandCanvasRef.current;
+    if (!canvas) return;
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    canvas.width = computedSize * dpr;
+    canvas.height = computedSize * dpr;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 6;
+    }
+  }, [computedSize]);
+
+  // Pointer event handlers for freehand blank paper drawing
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isFreehandMode) return;
+    const canvas = freehandCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    isDrawingRef.current = true;
+    lastPointRef.current = { x, y };
+    setHasFreehandStrokes(true);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#1e293b';
+    ctx.fill();
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current || !isFreehandMode) return;
+    const canvas = freehandCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx || !lastPointRef.current) return;
+
+    ctx.beginPath();
+    ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = e.pressure && e.pressure > 0 ? Math.max(3, e.pressure * 10) : 6;
+    ctx.stroke();
+
+    lastPointRef.current = { x, y };
+  };
+
+  const handlePointerUp = () => {
+    isDrawingRef.current = false;
+    lastPointRef.current = null;
+  };
+
+  const handleClearFreehand = useCallback(() => {
+    const canvas = freehandCanvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, computedSize, computedSize);
+      }
+    }
+    setHasFreehandStrokes(false);
+    setIsComparing(false);
+    resetBoard();
+  }, [computedSize, resetBoard]);
+
+  const handleCompareFreehand = async () => {
+    if (isComparing) return;
+    setIsComparing(true);
+    await hanziAudio.playChime();
+    try {
+      await animate();
+    } finally {
+      setIsComparing(false);
+      onFreehandCompare?.();
+    }
+  };
+
+  const handleToggleFreehandMode = (enable?: boolean) => {
+    const nextVal = enable !== undefined ? enable : !isFreehandMode;
+    setIsFreehandMode(nextVal);
+    handleClearFreehand();
+    if (nextVal) {
+      cancelQuiz();
+    }
+  };
+
   return (
     <div
       className={`flex flex-col items-center gap-4 w-full max-w-2xl select-none ${className}`}
@@ -172,6 +289,22 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
             >
               <Sparkles className={`w-3 h-3 ${isMemoryMode ? 'text-amber-400' : 'text-slate-400'}`} />
               <span>{isMemoryMode ? '🧠 Viết nhớ' : '👁️ Nét mờ'}</span>
+            </button>
+
+            {/* Freehand Blank Paper Mode Toggle */}
+            <button
+              type="button"
+              onClick={() => handleToggleFreehandMode()}
+              data-testid="btn-toggle-freehand-mode"
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-all ${
+                isFreehandMode
+                  ? 'bg-cyber-cyan text-obsidian-950 font-bold shadow-md shadow-cyan-950/40'
+                  : 'bg-obsidian-950 text-slate-300 border border-slate-700 hover:text-white'
+              }`}
+              title={isFreehandMode ? 'Trở về chế độ luyện nét có hướng dẫn' : 'Bật chế độ Giấy Trắng tự do (Thử thách trí nhớ)'}
+            >
+              <PenTool className="w-3 h-3" />
+              <span>{isFreehandMode ? '📄 Giấy trắng' : '🎯 Luyện nét'}</span>
             </button>
 
             {/* Grid Type Selector Toggle */}
@@ -227,6 +360,28 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
         </div>
       )}
 
+      {/* Freehand Mode Notice Banner */}
+      {isFreehandMode && (
+        <div
+          data-testid="freehand-mode-banner"
+          className="w-full px-3.5 py-2.5 rounded-xl bg-cyan-950/40 border border-cyber-cyan/40 text-cyber-cyan text-xs flex items-center justify-between animate-fadeIn shadow-sm"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            <PenTool className="w-4 h-4 text-cyber-cyan shrink-0 animate-bounce" />
+            <span>
+              <strong>Thử thách Giấy Trắng:</strong> Tự nhớ và vẽ nét tự do bằng tay / Apple Pencil, sau đó bấm <em>"Đối Chiếu & Chấm Nét"</em>!
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => handleToggleFreehandMode(false)}
+            className="underline text-cyber-cyan hover:text-cyan-200 text-xs font-semibold cursor-pointer shrink-0 ml-2"
+          >
+            Về luyện nét
+          </button>
+        </div>
+      )}
+
       {/* Main Square Writing Canvas */}
       <div
         className="relative bg-white rounded-3xl shadow-2xl border-2 border-slate-200/80 overflow-hidden flex items-center justify-center hanzi-canvas-container"
@@ -256,6 +411,25 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
             overscrollBehavior: 'none',
             userSelect: 'none',
             WebkitUserSelect: 'none',
+            pointerEvents: isFreehandMode ? 'none' : 'auto',
+          }}
+        />
+
+        {/* Tier 3: Freehand Blank Paper Drawing Canvas */}
+        <canvas
+          ref={freehandCanvasRef}
+          data-testid="freehand-canvas"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          className={`absolute inset-0 z-20 ${
+            isFreehandMode ? 'pointer-events-auto cursor-crosshair' : 'pointer-events-none hidden'
+          }`}
+          style={{
+            width: `${computedSize}px`,
+            height: `${computedSize}px`,
+            touchAction: 'none',
           }}
         />
 
@@ -343,10 +517,17 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
       </div>
 
       {/* Pedagogical Feedback Banner (Shows Directional Warning vs Stroke Error vs Success) */}
+      {/* Pedagogical Feedback Banner */}
       <div
         data-testid="canvas-feedback-banner"
         className={`w-full px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 text-center shadow-sm ${
-          feedbackType === 'success'
+          isFreehandMode
+            ? isComparing
+              ? 'bg-amber-950/50 text-amber-200 border-2 border-amber-500/60 shadow-amber-900/20 animate-pulse'
+              : hasFreehandStrokes
+              ? 'bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/40'
+              : 'bg-slate-900/80 text-slate-300 border border-slate-800'
+            : feedbackType === 'success'
             ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/40'
             : feedbackType === 'warning'
             ? 'bg-amber-950/50 text-amber-200 border-2 border-amber-500/60 shadow-amber-900/20 animate-pulse'
@@ -355,30 +536,83 @@ export const HanziCanvas: React.FC<HanziCanvasProps> = ({
             : 'bg-slate-900/80 text-slate-300 border border-slate-800'
         }`}
       >
-        {feedbackType === 'success' && <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
-        {feedbackType === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />}
-        {feedbackType === 'error' && <XCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />}
-        {feedbackType === 'info' && <Info className="w-4 h-4 text-cyber-cyan flex-shrink-0" />}
-        <span>{feedbackMessage}</span>
+        {isFreehandMode ? (
+          <>
+            {isComparing ? (
+              <Eye className="w-4 h-4 text-amber-400 flex-shrink-0 animate-bounce" />
+            ) : hasFreehandStrokes ? (
+              <CheckCheck className="w-4 h-4 text-cyber-cyan flex-shrink-0" />
+            ) : (
+              <PenTool className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            )}
+            <span>
+              {isComparing
+                ? 'Nét chuẩn đang chiếu đè lên nét viết của bạn! Hãy quan sát độ cân đối.'
+                : hasFreehandStrokes
+                ? 'Đã ghi nhận nét vẽ! Bấm "Đối Chiếu & Chấm Nét" bên dưới để so khớp.'
+                : 'Hãy dùng ngón tay hoặc Apple Pencil tự do viết chữ Hán vào ô.'}
+            </span>
+          </>
+        ) : (
+          <>
+            {feedbackType === 'success' && <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
+            {feedbackType === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+            {feedbackType === 'error' && <XCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />}
+            {feedbackType === 'info' && <Info className="w-4 h-4 text-cyber-cyan flex-shrink-0" />}
+            <span>{feedbackMessage}</span>
+          </>
+        )}
       </div>
 
       {/* Control Actions Toolbar */}
       {showControls && (
-        <StrokeControls
-          mode={mode}
-          isLoading={isLoading}
-          speed={speed}
-          isMuted={isMuted}
-          onAnimate={animate}
-          onPause={pauseAnimation}
-          onResume={resumeAnimation}
-          onStartQuiz={startQuiz}
-          onCancelQuiz={cancelQuiz}
-          onShowHint={showHint}
-          onReset={resetBoard}
-          onSpeedChange={setSpeed}
-          onToggleMute={toggleMute}
-        />
+        isFreehandMode ? (
+          <div
+            data-testid="freehand-controls-toolbar"
+            className="w-full flex items-center justify-between gap-3 p-2 rounded-2xl bg-obsidian-950 border border-slate-800 shadow-lg"
+          >
+            <button
+              type="button"
+              onClick={handleClearFreehand}
+              data-testid="btn-freehand-clear"
+              className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-600 font-semibold text-xs transition-all active:scale-95 min-h-[44px]"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Xóa viết lại</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCompareFreehand}
+              disabled={isComparing}
+              data-testid="btn-freehand-compare"
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs transition-all active:scale-95 shadow-md min-h-[44px] ${
+                isComparing
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 cursor-wait'
+                  : 'bg-cyber-cyan text-obsidian-950 hover:bg-cyan-300 shadow-cyan-950/40'
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              <span>{isComparing ? 'Đang chiếu nét...' : '🔍 Đối Chiếu & Chấm Nét'}</span>
+            </button>
+          </div>
+        ) : (
+          <StrokeControls
+            mode={mode}
+            isLoading={isLoading}
+            speed={speed}
+            isMuted={isMuted}
+            onAnimate={animate}
+            onPause={pauseAnimation}
+            onResume={resumeAnimation}
+            onStartQuiz={startQuiz}
+            onCancelQuiz={cancelQuiz}
+            onShowHint={showHint}
+            onReset={resetBoard}
+            onSpeedChange={setSpeed}
+            onToggleMute={toggleMute}
+          />
+        )
       )}
     </div>
   );

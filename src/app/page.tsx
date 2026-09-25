@@ -12,6 +12,8 @@ import { Header } from '@/components/layout';
 import { UserProfileModal } from '@/components/auth';
 import { GeminiAiModal } from '@/components/ai';
 import { InteractiveReaderStudio } from '@/components/reading';
+import { TimeAttackBattle } from '@/components/battle';
+import { srsService } from '@/services/srsService';
 import {
   Layers,
   Edit3,
@@ -23,9 +25,11 @@ import {
   Search,
   BookMarked,
   Mic,
+  Zap,
+  Brain,
 } from 'lucide-react';
 
-type StudioTab = 'flashcard' | 'canvas' | 'reader' | 'pitch' | 'dictionary';
+type StudioTab = 'flashcard' | 'canvas' | 'reader' | 'pitch' | 'dictionary' | 'battle';
 
 export default function HomePage() {
   const [selectedWord, setSelectedWord] = useState<HskWord>(HSK_CURRICULUM[0]);
@@ -33,6 +37,16 @@ export default function HomePage() {
   const [canvasSubMode, setCanvasSubMode] = useState<'single' | 'sentence'>('single');
   const [selectedCharIndex, setSelectedCharIndex] = useState(0);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [srsDueCount, setSrsDueCount] = useState<number>(0);
+
+  // Subscribe to SRS due cards
+  React.useEffect(() => {
+    setSrsDueCount(srsService.getDueCount());
+    const unsub = srsService.subscribe(() => {
+      setSrsDueCount(srsService.getDueCount());
+    });
+    return unsub;
+  }, []);
   const [playingTone, setPlayingTone] = useState<number | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
@@ -150,6 +164,25 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* SRS Review Alert Bar if due */}
+        {srsDueCount > 0 && (
+          <div className="mb-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2 font-medium">
+              <Brain className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+              <span>
+                Hôm nay bạn có <strong>{srsDueCount} từ</strong> đến hạn ôn tập theo thuật toán SuperMemo SM-2!
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('flashcard')}
+              className="px-3 py-1 rounded-xl bg-amber-500 text-obsidian-950 font-bold text-xs hover:bg-amber-400 transition-colors shadow-sm"
+            >
+              Ôn ngay
+            </button>
+          </div>
+        )}
+
         {/* Studio Primary Navigation Tabs */}
         <section className="mb-6">
           <div className="flex items-center bg-obsidian-900 p-1.5 rounded-2xl border border-slate-800 shadow-md overflow-x-auto scrollbar-none">
@@ -164,6 +197,22 @@ export default function HomePage() {
             >
               <Layers className="w-4 h-4" />
               <span>🎴 Thẻ Flashcard</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('battle')}
+              className={`flex-1 min-w-[145px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+                activeTab === 'battle'
+                  ? 'bg-cyber-cyan text-obsidian-950 shadow-md font-extrabold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+              <span>⚡ Đấu Trường 60s</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-obsidian-950 font-black uppercase">
+                Hot
+              </span>
             </button>
 
             <button
@@ -595,6 +644,19 @@ export default function HomePage() {
                   <span className="font-mono text-emerald-400">Vercel Edge Ready</span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB 5: 60-Second Time-Attack Vocab Battle */}
+          {activeTab === 'battle' && (
+            <div className="w-full">
+              <TimeAttackBattle
+                curriculum={HSK_CURRICULUM}
+                onWordSelect={(word) => {
+                  setSelectedWord(word);
+                  setSelectedCharIndex(0);
+                }}
+              />
             </div>
           )}
         </section>

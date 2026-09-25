@@ -5,7 +5,7 @@
 
 import { HskWord } from './hsk';
 
-export type FlashcardMode = 'flip' | 'learn' | 'match';
+export type FlashcardMode = 'flip' | 'learn' | 'match' | 'srs';
 
 export type FlashcardFilter = 'all' | 'mastered' | 'review' | 'favorite';
 

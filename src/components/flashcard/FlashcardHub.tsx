@@ -5,9 +5,11 @@ import { HskWord } from '@/types/hsk';
 import { FlashcardMode, FlashcardFilter } from '@/types/flashcard';
 import { UserProfile } from '@/types/auth';
 import { progressService } from '@/services/progressService';
+import { srsService } from '@/services/srsService';
 import { FlipCard } from './FlipCard';
 import { LearnQuiz } from './LearnQuiz';
 import { MatchGame } from './MatchGame';
+import { SrsReviewDeck } from './SrsReviewDeck';
 import {
   Layers,
   HelpCircle,
@@ -17,6 +19,7 @@ import {
   Star,
   BookOpen,
   Filter,
+  Brain,
 } from 'lucide-react';
 
 interface FlashcardHubProps {
@@ -33,13 +36,20 @@ export const FlashcardHub: React.FC<FlashcardHubProps> = ({
   const [activeMode, setActiveMode] = useState<FlashcardMode>('flip');
   const [activeFilter, setActiveFilter] = useState<FlashcardFilter>('all');
   const [userProfile, setUserProfile] = useState<UserProfile>(progressService.getProfile());
+  const [dueCount, setDueCount] = useState<number>(srsService.getDueCount());
 
-  // Subscribe to progress changes
+  // Subscribe to progress and SRS changes
   useEffect(() => {
-    const unsubscribe = progressService.subscribe((updated) => {
+    const unsubProgress = progressService.subscribe((updated) => {
       setUserProfile(updated);
     });
-    return unsubscribe;
+    const unsubSrs = srsService.subscribe(() => {
+      setDueCount(srsService.getDueCount());
+    });
+    return () => {
+      unsubProgress();
+      unsubSrs();
+    };
   }, []);
 
   // Filtered vocabulary list
@@ -117,6 +127,30 @@ export const FlashcardHub: React.FC<FlashcardHubProps> = ({
           >
             <Zap className="w-4 h-4" />
             <span>Ghép từ tốc độ</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveMode('srs')}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all min-h-[40px] relative ${
+              activeMode === 'srs'
+                ? 'bg-cyber-cyan text-obsidian-950 shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Brain className="w-4 h-4" />
+            <span>Ôn tập SRS</span>
+            {dueCount > 0 && (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                  activeMode === 'srs'
+                    ? 'bg-obsidian-950 text-amber-300'
+                    : 'bg-amber-500 text-obsidian-950 animate-pulse'
+                }`}
+              >
+                {dueCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -196,6 +230,13 @@ export const FlashcardHub: React.FC<FlashcardHubProps> = ({
 
         {activeMode === 'match' && (
           <MatchGame words={filteredWords} />
+        )}
+
+        {activeMode === 'srs' && (
+          <SrsReviewDeck
+            curriculum={curriculum}
+            onWordSelect={onWordSelect}
+          />
         )}
       </div>
     </div>

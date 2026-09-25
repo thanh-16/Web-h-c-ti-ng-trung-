@@ -37,11 +37,13 @@ export interface CircleSearchRequest {
 
 export interface CircleSearchResult {
   queryText: string;
+  targetType?: 'word' | 'sentence';
   matchedWord?: HskWord;
   pinyin?: string;
   sinoVietnamese?: string;
   vietnameseMeaning?: string;
   aiExplanation: string;
+  examples?: Array<{ chinese: string; pinyin: string; vietnamese: string }>;
   isFallback: boolean;
   cached?: boolean;
   error?: string;

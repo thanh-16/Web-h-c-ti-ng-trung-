@@ -316,6 +316,30 @@ Câu hỏi cụ thể của người học: "${customQuestion}".
 Hãy giải đáp chi tiết, súc tích, mang tính sư phạm và dễ hiểu bằng tiếng Việt có định dạng Markdown chuẩn.`;
     }
 
+    const isSentence = queryText.trim().length > 3 || /[。！？!?,，]/.test(queryText);
+
+    if (isSentence && (promptMode === 'explain' || promptMode === 'sentences')) {
+      return `Bạn là trợ lý giảng viên Hán ngữ cao cấp tại HanziVibe.
+Người học vừa KHOANH TRÒN toàn bộ CÂU / CỤM TỪ sau trong tài liệu:
+"${queryText}"${contextPart}
+
+Hãy cung cấp bản dịch và phân tích sư phạm toàn diện bằng tiếng Việt Markdown chuẩn mực theo bố cục sau:
+### 1. Dịch Nghĩa Toàn Câu & Ngữ Cảnh
+- **Dịch chuẩn tiếng Việt:** [Bản dịch thoát ý, tự nhiên và chính xác]
+- **Âm Hán Việt toàn câu:** [Phiên âm Hán Việt từng từ in hoa]
+- **Pinyin toàn câu:** [Pinyin chuẩn kèm thanh điệu]
+
+### 2. Phân Tích Cấu Trúc Ngữ Pháp Then Chốt
+- Điểm ngữ pháp cốt lõi trong câu (trật tự từ, hư từ, phó từ, biến điệu thanh điệu nếu có).
+- Bóc tách các từ vựng chính trong câu.
+
+### 3. Câu Ví Dụ Minh Họa Tương Đồng
+Hãy cung cấp 2-3 câu ví dụ tương đồng minh họa cách áp dụng cấu trúc ngữ pháp này trong giao tiếp hàng ngày. Mỗi ví dụ gồm:
+- **Chữ Hán:** ...
+- **Pinyin:** ...
+- **Dịch nghĩa:** ...`;
+    }
+
     if (promptMode === 'etymology') {
       return `Bạn là chuyên gia chiết tự và cổ văn học Hán ngữ tại HanziVibe.
 Người học vừa khoanh tròn chữ/từ: "${queryText}".${contextPart}
@@ -349,7 +373,7 @@ Hãy tạo 3 câu ví dụ giao tiếp thực tế đời thường có chứa t
 3. Dịch nghĩa tiếng Việt tự nhiên và phong phú.`;
     }
 
-    // Default 'explain' mode:
+    // Default 'explain' mode for words:
     return `Bạn là trợ lý AI thông minh về ngôn ngữ tiếng Trung của HanziVibe.
 Người học vừa KHOANH TRÒN chữ/từ: "${queryText}".${contextPart}
 Thông tin gợi ý: ${baseInfo}.
@@ -376,15 +400,60 @@ Hãy giải thích toàn diện bằng tiếng Việt Markdown theo bố cục s
    */
   public generateCircleSearchFallback(request: CircleSearchRequest): CircleSearchResult {
     const { queryText, contextSentence, promptMode = 'explain' } = request;
-    const { matchedWord, charInfo } = this.findLocalWordOrChar(queryText);
+    const trimmed = queryText.trim();
+    const isSentence = trimmed.length > 3 || /[。！？!?,，]/.test(trimmed);
+    const targetType: 'word' | 'sentence' = isSentence ? 'sentence' : 'word';
 
-    const pinyin = matchedWord?.pinyin || charInfo?.pinyin || 'Xem chi tiết bên dưới';
-    const sinoVietnamese = matchedWord?.sinoVietnamese || charInfo?.sinoVietnamese || 'HÁN VIỆT';
-    const vietnameseMeaning = matchedWord?.vietnameseMeaning || charInfo?.meaning || 'Từ tiếng Trung được khoanh';
+    const { matchedWord, charInfo } = this.findLocalWordOrChar(trimmed);
 
+    // Check if queryText matches an HSK 1 sentence
+    const matchedSentence = HSK1_SENTENCES.find(
+      (s) => s.chinese === trimmed || trimmed.includes(s.chinese) || s.chinese.includes(trimmed)
+    );
+
+    let pinyin = matchedWord?.pinyin || charInfo?.pinyin;
+    let sinoVietnamese = matchedWord?.sinoVietnamese || charInfo?.sinoVietnamese;
+    let vietnameseMeaning = matchedWord?.vietnameseMeaning || charInfo?.meaning;
     let explanation = '';
+    const examples: Array<{ chinese: string; pinyin: string; vietnamese: string }> = [];
 
-    if (matchedWord) {
+    if (matchedSentence && isSentence) {
+      pinyin = matchedSentence.pinyin;
+      sinoVietnamese = matchedSentence.sinoVietnamese;
+      vietnameseMeaning = matchedSentence.vietnamese;
+
+      explanation = `### 🔍 Dịch & Phân Tích Câu Được Khoanh: **${matchedSentence.chinese}**
+
+- **Dịch nghĩa tiếng Việt:** **"${matchedSentence.vietnamese}"**
+- **Âm Hán Việt:** **${matchedSentence.sinoVietnamese}**
+- **Pinyin:** *${matchedSentence.pinyin}*
+- **Chủ đề giao tiếp:** \`${matchedSentence.category}\`
+
+#### 💡 Điểm Ngữ Pháp Cốt Lõi:
+> ${matchedSentence.grammarTip || 'Cấu trúc khẩu ngữ thông dụng trong giao tiếp hàng ngày.'}
+
+#### 📚 Bóc Tách Từ Vựng Trong Câu:
+${matchedSentence.characters.map((c) => `- **${c.char}** (${c.pinyin} - *${c.sinoVietnamese}*): ${c.meaning}`).join('\n')}
+
+#### 📖 Câu Ví Dụ Minh Họa Mở Rộng:
+1. **${matchedSentence.chinese}** (*${matchedSentence.pinyin}*): ${matchedSentence.vietnamese}
+2. **今天很高兴见到你。** (*Jīntiān hěn gāoxìng jiàn dào nǐ.*): Hôm nay rất vui được gặp bạn.`;
+
+      examples.push({
+        chinese: matchedSentence.chinese,
+        pinyin: matchedSentence.pinyin,
+        vietnamese: matchedSentence.vietnamese,
+      });
+      examples.push({
+        chinese: '今天很高兴见到你。',
+        pinyin: 'Jīntiān hěn gāoxìng jiàn dào nǐ.',
+        vietnamese: 'Hôm nay rất vui được gặp bạn.',
+      });
+    } else if (matchedWord) {
+      pinyin = matchedWord.pinyin;
+      sinoVietnamese = matchedWord.sinoVietnamese;
+      vietnameseMeaning = matchedWord.vietnameseMeaning;
+
       if (promptMode === 'etymology') {
         explanation = this.generatePedagogicalFallback(matchedWord, 'etymology');
       } else if (promptMode === 'mnemonic') {
@@ -406,12 +475,29 @@ ${matchedWord.mnemonic ? `> **"${matchedWord.mnemonic}"**` : `> Nhìn bộ thủ
 #### 🏛️ Chiết Tự Cổ Văn:
 ${matchedWord.decomposition || `Chữ ${matchedWord.hanzi} có kết cấu hài hòa giữa yếu tố hình thái và ngữ nghĩa.`}
 
-#### 💬 Câu Ví Dụ Ngữ Cảnh:
+#### 💬 Câu Ví Dụ Minh Họa:
 - **Chữ Hán:** ${matchedWord.exampleSentence.chinese}
 - **Pinyin:** *${matchedWord.exampleSentence.pinyin}*
 - **Tiếng Việt:** ${matchedWord.exampleSentence.vietnamese}`;
       }
+
+      examples.push({
+        chinese: matchedWord.exampleSentence.chinese,
+        pinyin: matchedWord.exampleSentence.pinyin,
+        vietnamese: matchedWord.exampleSentence.vietnamese,
+      });
+      if (matchedWord.relatedWords && matchedWord.relatedWords.length > 0) {
+        examples.push({
+          chinese: `我很喜欢${matchedWord.relatedWords[0].hanzi}。`,
+          pinyin: `Wǒ hěn xǐhuan ${matchedWord.relatedWords[0].pinyin}.`,
+          vietnamese: `Tôi rất thích ${matchedWord.relatedWords[0].vietnamese}.`,
+        });
+      }
     } else if (charInfo) {
+      pinyin = charInfo.pinyin;
+      sinoVietnamese = charInfo.sinoVietnamese;
+      vietnameseMeaning = charInfo.meaning;
+
       explanation = `### 🔍 Phân Tích Chữ Được Khoanh: **${charInfo.char}** (${charInfo.sinoVietnamese})
 
 - **Pinyin:** \`${charInfo.pinyin}\`
@@ -422,24 +508,39 @@ ${contextSentence ? `- **Ngữ cảnh trong câu:** *"${contextSentence}"*` : ''
 #### 💡 Mẹo Nhớ Hán - Việt:
 - Chữ **${charInfo.char}** có âm Hán Việt là **${charInfo.sinoVietnamese}**. Người Việt dùng từ này rất quen thuộc trong đời sống hàng ngày!
 - Nắm vững âm Hán Việt giúp bạn dễ dàng đọc hiểu và liên hệ với các từ ghép mở rộng trong tiếng Trung mà không cần học vẹt.`;
-    } else {
-      explanation = `### 🔍 Tra Cứu Chữ Được Khoanh: **${queryText}**
 
-- **Ký tự tra cứu:** ${queryText}
+      examples.push({
+        chinese: `这个${charInfo.char}很有意思。`,
+        pinyin: `Zhè ge ${charInfo.pinyin} hěn yǒu yìsi.`,
+        vietnamese: `Chữ này rất thú vị.`,
+      });
+    } else {
+      explanation = `### 🔍 Tra Cứu ${isSentence ? 'Câu' : 'Chữ'} Được Khoanh: **${trimmed}**
+
+- **Nội dung:** ${trimmed}
+- **Dạng thức:** ${isSentence ? 'Câu / Mẫu ngữ cảnh' : 'Từ vựng'}
 ${contextSentence ? `- **Ngữ cảnh xuất hiện:** *"${contextSentence}"*` : ''}
 
 #### 📚 Hướng Dẫn Sư Phạm:
-- Đây là một chữ/từ vựng tiếng Trung xuất hiện trong bài đọc.
-- Bạn có thể chuyển sang chế độ **"Hỏi AI tùy chỉnh"** để đặt câu hỏi cụ thể, hoặc kết nối mạng để trợ lý Gemini AI phân tích chiết tự và ngữ nghĩa chi tiết nhất!`;
+- Đã ghi nhận đoạn văn bản vào phiên học đọc hiểu của bạn.
+- Bạn có thể chuyển sang chế độ **"Hỏi AI tùy chỉnh"** để hỏi sâu hơn về cấu trúc ngữ pháp này!`;
+
+      examples.push({
+        chinese: trimmed,
+        pinyin: pinyin || '...',
+        vietnamese: vietnameseMeaning || 'Nội dung đang học',
+      });
     }
 
     return {
-      queryText,
+      queryText: trimmed,
+      targetType,
       matchedWord,
-      pinyin,
-      sinoVietnamese,
-      vietnameseMeaning,
+      pinyin: pinyin || (isSentence ? 'Xem toàn câu bên dưới' : 'Tra cứu'),
+      sinoVietnamese: sinoVietnamese || (isSentence ? 'DỊCH CÂU' : 'HÁN VIỆT'),
+      vietnameseMeaning: vietnameseMeaning || (isSentence ? 'Câu tiếng Trung hoàn chỉnh' : 'Từ vựng được khoanh'),
       aiExplanation: explanation,
+      examples,
       isFallback: true,
     };
   }
@@ -517,13 +618,17 @@ ${contextSentence ? `- **Ngữ cảnh xuất hiện:** *"${contextSentence}"*` :
 
       this.cache.set(cacheKey, generatedText);
 
+      const fallbackDefaults = this.generateCircleSearchFallback(request);
+
       return {
         queryText,
+        targetType: fallbackDefaults.targetType,
         matchedWord,
-        pinyin,
-        sinoVietnamese,
-        vietnameseMeaning,
+        pinyin: pinyin || fallbackDefaults.pinyin,
+        sinoVietnamese: sinoVietnamese || fallbackDefaults.sinoVietnamese,
+        vietnameseMeaning: vietnameseMeaning || fallbackDefaults.vietnameseMeaning,
         aiExplanation: generatedText,
+        examples: fallbackDefaults.examples,
         isFallback: false,
       };
     } catch (err: unknown) {

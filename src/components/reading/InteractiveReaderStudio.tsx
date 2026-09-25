@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { CircleToSearchOverlay, CircleToSearchModal } from '@/components/ai';
 import { SpeechService } from '@/services/speechService';
 import {
@@ -9,6 +9,8 @@ import {
   PdfDocumentResult,
   PdfPageResult,
 } from '@/services/pdfTextExtractor';
+import { DocumentAnnotation } from '@/types/annotation';
+import { annotationService } from '@/services/annotationService';
 import { HskWord } from '@/types/hsk';
 import {
   BookOpen,
@@ -27,6 +29,12 @@ import {
   RotateCcw,
   Loader2,
   AlertCircle,
+  Bookmark,
+  Trash2,
+  Copy,
+  Check,
+  Filter,
+  ExternalLink,
 } from 'lucide-react';
 
 interface ReadingPassage {
@@ -69,7 +77,7 @@ const SAMPLE_PASSAGES: ReadingPassage[] = [
   },
 ];
 
-type ReaderSourceMode = 'samples' | 'pdf' | 'custom';
+type ReaderSourceMode = 'samples' | 'pdf' | 'custom' | 'notes';
 
 interface InteractiveReaderStudioProps {
   onPracticeCharacter?: (char: string, matchedWord?: HskWord) => void;
@@ -82,6 +90,55 @@ export const InteractiveReaderStudio: React.FC<InteractiveReaderStudioProps> = (
 }) => {
   const [sourceMode, setSourceMode] = useState<ReaderSourceMode>('samples');
   const [selectedPassageId, setSelectedPassageId] = useState<string>(SAMPLE_PASSAGES[0].id);
+
+  // Saved Annotations state
+  const [annotations, setAnnotations] = useState<DocumentAnnotation[]>([]);
+  const [annotationFilter, setAnnotationFilter] = useState<'all' | 'word' | 'sentence'>('all');
+  const [copiedAnnotationId, setCopiedAnnotationId] = useState<string | null>(null);
+  const [expandedExplanationId, setExpandedExplanationId] = useState<string | null>(null);
+
+  // Subscribe to annotationService updates
+  useEffect(() => {
+    const unsubscribe = annotationService.subscribe((updated) => {
+      setAnnotations(updated);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const handleDeleteAnnotation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    annotationService.deleteAnnotation(id);
+  };
+
+  const handleClearAllAnnotations = () => {
+    if (typeof window !== 'undefined' && window.confirm('Bạn có chắc chắn muốn xóa toàn bộ ghi chú dịch đã lưu không?')) {
+      annotationService.clearAll();
+    }
+  };
+
+  const handleCopyAnnotation = (item: DocumentAnnotation, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const content = `[${item.targetType === 'sentence' ? 'CÂU' : 'TỪ'}] ${item.queryText} (${item.pinyin || ''} - ${item.sinoVietnamese || ''})\nNghĩa: ${item.vietnameseMeaning || ''}\n${item.explanation}`;
+    navigator.clipboard.writeText(content);
+    setCopiedAnnotationId(item.id);
+    setTimeout(() => setCopiedAnnotationId(null), 2000);
+  };
+
+  const handleSpeakText = async (text: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const speech = SpeechService.getInstance();
+      await speech.speak(text);
+    } catch (err) {
+      console.warn('TTS Error:', err);
+    }
+  };
+
+  const toggleExpandExplanation = (id: string) => {
+    setExpandedExplanationId((prev) => (prev === id ? null : id));
+  };
 
   // Custom text input
   const [customText, setCustomText] = useState<string>('');
@@ -267,6 +324,19 @@ export const InteractiveReaderStudio: React.FC<InteractiveReaderStudioProps> = (
               <Edit3 className="w-3.5 h-3.5" />
               <span>Dán văn bản</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setSourceMode('notes')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                sourceMode === 'notes'
+                  ? 'bg-amber-400 text-obsidian-950 font-extrabold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Bookmark className="w-3.5 h-3.5" />
+              <span>Sổ tay ({annotations.length})</span>
+            </button>
           </div>
         </div>
       </div>
@@ -427,15 +497,304 @@ export const InteractiveReaderStudio: React.FC<InteractiveReaderStudioProps> = (
         </div>
       )}
 
-      {/* 5. Main Interactive Circle-to-Search Canvas Display */}
-      <CircleToSearchOverlay
-        sentenceText={activeText}
-        pinyinText={activePinyin}
-        sinoVietnameseText={activeSinoViet}
-        vietnameseMeaning={activeVietnamese}
-        onCircleWord={handleWordCircled}
-        className="w-full"
-      />
+      {/* 5. Main Interactive Display: Notebook or Circle-to-Search Canvas */}
+      {sourceMode === 'notes' ? (
+        <div className="flex flex-col gap-5 p-4 sm:p-6 rounded-3xl bg-obsidian-900 border border-slate-800 shadow-xl">
+          {/* Header Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <Bookmark className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-base font-bold text-white flex items-center gap-2">
+                  <span>Sổ Tay Ghi Chú &amp; Dịch Thuật AI</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                    {annotations.length} mục đã lưu
+                  </span>
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Lưu trữ từ vựng và mẫu câu bạn đã khoanh tròn kèm phân tích ngữ pháp, câu ví dụ và phát âm chuẩn.
+                </p>
+              </div>
+            </div>
+
+            {/* Controls: Filter Pills & Clear All */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center bg-obsidian-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setAnnotationFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                    annotationFilter === 'all'
+                      ? 'bg-cyber-cyan text-obsidian-950 font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Tất cả ({annotations.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnnotationFilter('word')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                    annotationFilter === 'word'
+                      ? 'bg-cyber-cyan text-obsidian-950 font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Từ vựng ({annotations.filter((a) => a.targetType === 'word').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnnotationFilter('sentence')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                    annotationFilter === 'sentence'
+                      ? 'bg-cyber-cyan text-obsidian-950 font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Câu văn ({annotations.filter((a) => a.targetType === 'sentence').length})
+                </button>
+              </div>
+
+              {annotations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAllAnnotations}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 hover:bg-red-500/20 text-xs font-semibold transition-all active:scale-95"
+                  title="Xóa tất cả ghi chú"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Xóa hết</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* List of Annotations */}
+          {annotations.filter((item) => {
+            if (annotationFilter === 'word') return item.targetType === 'word';
+            if (annotationFilter === 'sentence') return item.targetType === 'sentence';
+            return true;
+          }).length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-400">
+                <Bookmark className="w-6 h-6" />
+              </div>
+              <div className="max-w-md">
+                <h5 className="text-sm font-bold text-slate-200">
+                  {annotations.length === 0
+                    ? 'Chưa có ghi chú nào được lưu'
+                    : 'Không có ghi chú nào thuộc danh mục này'}
+                </h5>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  {annotations.length === 0
+                    ? 'Hãy chọn một bài đọc trong "Bài mẫu HSK", tải tệp "Tài liệu PDF" hoặc "Dán văn bản", sau đó khoanh tròn từ/câu cần tra và bấm "Lưu ghi chú" để xem lại tại đây.'
+                    : 'Hãy chuyển bộ lọc sang "Tất cả" để xem các ghi chú khác.'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {annotations
+                .filter((item) => {
+                  if (annotationFilter === 'word') return item.targetType === 'word';
+                  if (annotationFilter === 'sentence') return item.targetType === 'sentence';
+                  return true;
+                })
+                .map((item) => {
+                  const isExpanded = expandedExplanationId === item.id;
+                  const isCopied = copiedAnnotationId === item.id;
+                  const isSentence = item.targetType === 'sentence';
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-4 sm:p-5 rounded-2xl bg-obsidian-950/80 border border-slate-800 hover:border-slate-700 transition-all flex flex-col gap-3 shadow-lg"
+                    >
+                      {/* Top Row: Query Text + Badges + Actions */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span
+                            className={`font-serif font-extrabold text-white leading-tight ${
+                              isSentence ? 'text-lg sm:text-xl' : 'text-2xl sm:text-3xl'
+                            }`}
+                          >
+                            {item.queryText}
+                          </span>
+
+                          <span
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold tracking-wide ${
+                              isSentence
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                : 'bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/30'
+                            }`}
+                          >
+                            {isSentence ? 'CÂU VĂN' : 'TỪ VỰNG'}
+                          </span>
+
+                          {item.pinyin && (
+                            <span className="text-xs sm:text-sm font-mono font-bold text-cyber-cyan">
+                              {item.pinyin}
+                            </span>
+                          )}
+
+                          {item.sinoVietnamese && (
+                            <span className="text-xs px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 font-extrabold tracking-wider">
+                              {item.sinoVietnamese}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                          {/* Audio */}
+                          <button
+                            type="button"
+                            onClick={(e) => handleSpeakText(item.queryText, e)}
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-cyber-cyan transition-colors"
+                            title="Phát âm"
+                            aria-label={`Phát âm ${item.queryText}`}
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+
+                          {/* Practice stroke if short */}
+                          {onPracticeCharacter && item.queryText.length <= 4 && (
+                            <button
+                              type="button"
+                              onClick={() => onPracticeCharacter(item.queryText)}
+                              className="p-2 rounded-xl bg-cyber-cyan/10 hover:bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/30 transition-colors"
+                              title="Luyện viết nét"
+                              aria-label={`Luyện viết nét ${item.queryText}`}
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                          )}
+
+                          {/* Ask AI in modal */}
+                          <button
+                            type="button"
+                            onClick={() => handleWordCircled(item.queryText)}
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-amber-300 transition-colors"
+                            title="Mở bảng hỏi AI chi tiết"
+                            aria-label={`Hỏi AI chi tiết về ${item.queryText}`}
+                          >
+                            <Bot className="w-4 h-4" />
+                          </button>
+
+                          {/* Copy */}
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopyAnnotation(item, e)}
+                            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
+                            title="Sao chép nội dung ghi chú"
+                            aria-label="Sao chép ghi chú"
+                          >
+                            {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                          </button>
+
+                          {/* Delete */}
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteAnnotation(item.id, e)}
+                            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
+                            title="Xóa ghi chú này"
+                            aria-label="Xóa ghi chú"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Vietnamese meaning & Context */}
+                      <div className="space-y-1">
+                        <div className="text-sm font-semibold text-slate-200">
+                          {item.vietnameseMeaning || 'Chưa có bản dịch tóm tắt'}
+                        </div>
+                        {item.contextSentence && item.contextSentence !== item.queryText && (
+                          <div className="text-xs text-slate-400 italic">
+                            Ngữ cảnh: &quot;{item.contextSentence}&quot;
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Illustrative Examples Cards */}
+                      {item.examples && item.examples.length > 0 && (
+                        <div className="mt-1 p-3 rounded-xl bg-obsidian-900 border border-slate-800/80 space-y-2">
+                          <div className="text-[11px] font-bold text-cyber-cyan flex items-center gap-1.5">
+                            <BookOpen className="w-3.5 h-3.5" />
+                            <span>Ví dụ minh họa ngữ cảnh ({item.examples.length})</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {item.examples.map((eg, idx) => (
+                              <div
+                                key={idx}
+                                className="p-2.5 rounded-lg bg-obsidian-950/70 border border-slate-800 flex items-start justify-between gap-2"
+                              >
+                                <div className="space-y-0.5">
+                                  <div className="text-xs font-serif font-bold text-white">
+                                    {eg.chinese}
+                                  </div>
+                                  <div className="text-[11px] font-mono text-cyber-cyan">
+                                    {eg.pinyin}
+                                  </div>
+                                  <div className="text-[11px] text-slate-300">
+                                    {eg.vietnamese}
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleSpeakText(eg.chinese, e)}
+                                  className="p-1 rounded-md text-slate-400 hover:text-cyber-cyan hover:bg-slate-800 transition-colors shrink-0"
+                                  title="Phát âm câu ví dụ"
+                                  aria-label={`Nghe câu ví dụ ${eg.chinese}`}
+                                >
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Expandable Explanation & Timestamp */}
+                      <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                        <button
+                          type="button"
+                          onClick={() => toggleExpandExplanation(item.id)}
+                          className="text-cyber-cyan hover:underline font-semibold flex items-center gap-1"
+                        >
+                          <span>{isExpanded ? 'Thu gọn phân tích' : 'Xem giải thích chi tiết của AI'}</span>
+                        </button>
+
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {new Date(item.createdAt).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+
+                      {/* Expanded AI Explanation */}
+                      {isExpanded && (
+                        <div className="p-3.5 rounded-xl bg-obsidian-900 border border-slate-800 text-xs leading-relaxed text-slate-300 whitespace-pre-line font-sans">
+                          {item.explanation}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <CircleToSearchOverlay
+          sentenceText={activeText}
+          pinyinText={activePinyin}
+          sinoVietnameseText={activeSinoViet}
+          vietnameseMeaning={activeVietnamese}
+          onCircleWord={handleWordCircled}
+          className="w-full"
+        />
+      )}
 
       {/* 6. Floating Circle-to-Search Modal Dialog */}
       <CircleToSearchModal

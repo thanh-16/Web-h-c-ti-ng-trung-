@@ -221,8 +221,14 @@ export const CircleToSearchOverlay: React.FC<CircleToSearchOverlayProps> = ({
         y: Math.max(0, elRect.top - containerRect.top - 45),
       });
     }
+  };
 
-    onCircleWord(char);
+  // Select entire sentence for translation and explanation
+  const handleSelectWholeSentence = () => {
+    setSelectedCharIndex(null);
+    setCircledWord(sentenceText);
+    hanziAudio.playChime().catch(() => {});
+    onCircleWord(sentenceText);
   };
 
   // Split sentence into characters
@@ -234,45 +240,58 @@ export const CircleToSearchOverlay: React.FC<CircleToSearchOverlayProps> = ({
       className={`relative p-4 sm:p-6 rounded-3xl bg-obsidian-950/80 border border-slate-800 shadow-xl overflow-visible select-none ${className}`}
     >
       {/* Top Banner & Mode Toggle */}
-      <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-800/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-800/80">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/30 flex items-center justify-center text-cyber-cyan">
             <Sparkles className="w-3.5 h-3.5" />
           </div>
           <div>
             <span className="text-xs font-bold text-white flex items-center gap-1.5">
-              <span>Khoanh chữ không biết để hỏi AI</span>
+              <span>Khoanh từ hoặc câu để dịch &amp; hỏi AI</span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyber-cyan/20 text-cyber-cyan">
-                Lasso &amp; Tap
+                Word &amp; Sentence
               </span>
             </span>
             <p className="text-[11px] text-slate-400">
-              Dùng ngón tay/bút khoanh tròn hoặc chạm vào bất kỳ chữ Hán nào để tra cứu ngay!
+              Khoanh từ, chạm vào chữ hoặc chọn toàn bộ câu để xem dịch nghĩa và ví dụ minh họa!
             </p>
           </div>
         </div>
 
-        {/* Toggle Freehand Lasso Drawing Mode */}
-        {enableLassoMode && (
+        {/* Action Buttons: Lasso Mode & Select Whole Sentence */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={() => {
-              setIsLassoActive((prev) => !prev);
-              setSelectedCharIndex(null);
-              setCircledWord(null);
-              setFloatingPos(null);
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[36px] ${
-              isLassoActive
-                ? 'bg-cyber-cyan text-obsidian-950 shadow-lg shadow-cyber-cyan/20 scale-105'
-                : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700'
-            }`}
+            onClick={handleSelectWholeSentence}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 min-h-[36px] active:scale-95 shadow-sm"
+            title="Dịch và phân tích ngữ pháp toàn bộ câu văn này"
           >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>{isLassoActive ? 'Đang bật bút vẽ khoanh' : 'Bật bút khoanh'}</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Dịch cả câu</span>
           </button>
-        )}
+
+          {enableLassoMode && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsLassoActive((prev) => !prev);
+                setSelectedCharIndex(null);
+                setCircledWord(null);
+                setFloatingPos(null);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[36px] ${
+                isLassoActive
+                  ? 'bg-cyber-cyan text-obsidian-950 shadow-lg shadow-cyber-cyan/20 scale-105'
+                  : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700'
+              }`}
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>{isLassoActive ? 'Đang bật bút vẽ' : 'Bật bút vẽ khoanh'}</span>
+            </button>
+          )}
+        </div>
       </div>
+
 
       {/* Floating Action Pill if a word was selected/circled */}
       {circledWord && floatingPos && (

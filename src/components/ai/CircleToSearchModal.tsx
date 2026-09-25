@@ -21,7 +21,10 @@ import {
   AlertCircle,
   HelpCircle,
   Bot,
+  Bookmark,
+  BookmarkCheck,
 } from 'lucide-react';
+import { annotationService } from '@/services/annotationService';
 
 interface CircleToSearchModalProps {
   isOpen: boolean;
@@ -44,6 +47,7 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isSavedNote, setIsSavedNote] = useState<boolean>(false);
 
   // Fetch AI content whenever queryText, contextSentence or activeMode changes
   useEffect(() => {
@@ -81,7 +85,16 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
     };
   }, [isOpen, queryText, contextSentence, activeMode]);
 
-  // Audio Pronunciation
+  // Synchronize isSavedNote state with annotationService
+  useEffect(() => {
+    if (!isOpen || !queryText.trim()) return;
+    const existing = annotationService
+      .getAnnotations()
+      .find((a) => a.queryText.trim() === queryText.trim());
+    setIsSavedNote(!!existing);
+  }, [isOpen, queryText]);
+
+  // Audio Pronunciation for main query
   const handlePlayAudio = async () => {
     if (isPlayingAudio || !queryText) return;
     try {
@@ -92,6 +105,45 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
       console.warn('TTS Error:', e);
     } finally {
       setIsPlayingAudio(false);
+    }
+  };
+
+  // Audio Pronunciation for specific text (e.g. example sentences)
+  const handlePlaySpecificAudio = async (text: string) => {
+    try {
+      const speech = SpeechService.getInstance();
+      await speech.speak(text);
+    } catch (e) {
+      console.warn('TTS Error:', e);
+    }
+  };
+
+  // Save / Toggle Document Annotation Note
+  const handleSaveNote = () => {
+    if (!result) return;
+    const trimmed = queryText.trim();
+    if (isSavedNote) {
+      const existing = annotationService
+        .getAnnotations()
+        .find((a) => a.queryText.trim() === trimmed);
+      if (existing) {
+        annotationService.deleteAnnotation(existing.id);
+        setIsSavedNote(false);
+      }
+    } else {
+      const isSentence = result.targetType === 'sentence' || trimmed.length > 4;
+      annotationService.saveAnnotation({
+        queryText: trimmed,
+        targetType: isSentence ? 'sentence' : 'word',
+        contextSentence,
+        pinyin: result.pinyin,
+        sinoVietnamese: result.sinoVietnamese,
+        vietnameseMeaning: result.vietnameseMeaning,
+        explanation: result.aiExplanation,
+        examples: result.examples || [],
+        colorTag: isSentence ? 'purple' : 'cyan',
+      });
+      setIsSavedNote(true);
     }
   };
 
@@ -165,17 +217,28 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
           </button>
         </div>
 
-        {/* Character Card Hero Section */}
+        {/* Character / Sentence Card Hero Section */}
         <div className="p-4 sm:p-5 bg-gradient-to-b from-obsidian-950/80 to-obsidian-900 border-b border-slate-800/80 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
-          <div className="flex items-center gap-4 text-center sm:text-left">
-            {/* Hand-drawn style circular character container */}
-            <div className="relative group">
-              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyber-cyan to-amber-400 opacity-60 blur-sm group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-obsidian-950 border-2 border-cyber-cyan flex items-center justify-center shadow-inner">
-                <span className="text-3xl sm:text-4xl font-serif font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-cyber-cyan">
-                  {queryText}
-                </span>
-              </div>
+          <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full sm:w-auto">
+            {/* Hand-drawn style circular character container or adaptive card */}
+            <div className="relative group shrink-0">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyber-cyan to-amber-400 opacity-60 blur-sm group-hover:opacity-100 transition-opacity"></div>
+              {queryText.length > 4 ? (
+                <div className="relative max-w-xs sm:max-w-sm p-3.5 rounded-2xl bg-obsidian-950 border-2 border-cyber-cyan flex flex-col justify-center shadow-inner text-left">
+                  <span className="text-[10px] font-mono text-cyber-cyan font-bold tracking-wider mb-1">
+                    CÂU / MẪU NGỮ CẢNH
+                  </span>
+                  <span className="text-sm sm:text-base font-serif font-extrabold text-white line-clamp-3 leading-snug">
+                    {queryText}
+                  </span>
+                </div>
+              ) : (
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-obsidian-950 border-2 border-cyber-cyan flex items-center justify-center shadow-inner">
+                  <span className="text-3xl sm:text-4xl font-serif font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-cyber-cyan">
+                    {queryText}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -201,7 +264,7 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
                 {result?.vietnameseMeaning || 'Đang tra cứu ngữ nghĩa...'}
               </div>
 
-              {contextSentence && (
+              {contextSentence && contextSentence !== queryText && (
                 <div className="text-[11px] text-slate-400 mt-1.5 line-clamp-1 italic max-w-md">
                   Ngữ cảnh: &quot;{contextSentence}&quot;
                 </div>
@@ -209,19 +272,44 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons: Audio & Practice */}
-          <div className="flex items-center gap-2">
+          {/* Action Buttons: Audio, Save Note & Practice */}
+          <div className="flex items-center gap-2 flex-wrap justify-end shrink-0">
             <button
               type="button"
               onClick={handlePlayAudio}
               disabled={isPlayingAudio}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all shadow-sm active:scale-95"
+              title="Nghe phát âm nội dung này"
             >
-              <Volume2 className={`w-4 h-4 text-cyber-cyan ${isPlayingAudio ? 'animate-bounce' : ''}`} />
+              <Volume2 className={`w-4 h-4 text-cyber-cyan ${isPlayingAudio ? 'animate-bounce text-emerald-400' : ''}`} />
               <span>Phát âm</span>
             </button>
 
-            {onPracticeCharacter && (
+            <button
+              type="button"
+              onClick={handleSaveNote}
+              disabled={!result}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm active:scale-95 ${
+                isSavedNote
+                  ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 hover:bg-amber-500/30'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+              }`}
+              title={isSavedNote ? 'Bấm để hủy lưu ghi chú này' : 'Lưu ghi chú dịch này vào Sổ tay'}
+            >
+              {isSavedNote ? (
+                <>
+                  <BookmarkCheck className="w-4 h-4 text-amber-400" />
+                  <span>Đã lưu ghi chú</span>
+                </>
+              ) : (
+                <>
+                  <Bookmark className="w-4 h-4 text-cyber-cyan" />
+                  <span>Lưu ghi chú</span>
+                </>
+              )}
+            </button>
+
+            {onPracticeCharacter && queryText.length <= 4 && (
               <button
                 type="button"
                 onClick={() => {
@@ -229,6 +317,7 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
                   onClose();
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyber-cyan/20 border border-cyber-cyan/40 hover:bg-cyber-cyan/30 text-cyber-cyan text-xs font-bold transition-all shadow-sm active:scale-95"
+                title="Luyện viết nét bút thuận"
               >
                 <Edit3 className="w-4 h-4" />
                 <span>Luyện viết nét</span>
@@ -409,6 +498,54 @@ export const CircleToSearchModal: React.FC<CircleToSearchModalProps> = ({
                   );
                 })}
               </div>
+
+              {/* Illustrative Examples Cards Section */}
+              {result.examples && result.examples.length > 0 && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-obsidian-950/70 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-cyber-cyan" />
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5">
+                        <span>Câu Ví Dụ Minh Họa Ngữ Cảnh</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/30">
+                          {result.examples.length} câu
+                        </span>
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-slate-400">Bấm loa để nghe phát âm</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {result.examples.map((eg, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 sm:p-3.5 rounded-xl bg-obsidian-900/90 border border-slate-800/80 hover:border-cyber-cyan/40 transition-all flex items-start justify-between gap-3 group"
+                      >
+                        <div className="space-y-1">
+                          <div className="text-sm font-serif font-bold text-white tracking-wide">
+                            {eg.chinese}
+                          </div>
+                          <div className="text-xs font-mono text-cyber-cyan">
+                            {eg.pinyin}
+                          </div>
+                          <div className="text-xs text-slate-300">
+                            {eg.vietnamese}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handlePlaySpecificAudio(eg.chinese)}
+                          className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-cyber-cyan transition-colors shrink-0 group-hover:scale-105 active:scale-95"
+                          title={`Nghe câu ví dụ: ${eg.chinese}`}
+                          aria-label={`Nghe câu ví dụ ${eg.chinese}`}
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-10 text-slate-400 text-xs">

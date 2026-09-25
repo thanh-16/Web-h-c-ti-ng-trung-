@@ -134,10 +134,11 @@ Trước khi công bố liên kết cho học viên, hãy rà soát bảng kiể
 
 | STT | Hạng mục kiểm tra | Tiêu chuẩn đạt | Trạng thái |
 |:---:|:---|:---|:---:|
-| 1 | Bộ kiểm thử tự động | Chạy `npm test` đạt 279/279 tests pass | ✅ Đạt |
+| 1 | Bộ kiểm thử tự động | Chạy `npm test` đạt 323/323 tests pass (23 test suites) | ✅ Đạt |
 | 2 | Đóng gói xuất tĩnh | Chạy `npm run build` sinh thư mục `out/` không cảnh báo lỗi | ✅ Đạt |
 | 3 | Tên miền HTTPS | Truy cập qua Vercel URL có biểu tượng ổ khóa bảo mật | ✅ Đạt |
 | 4 | Thu âm thanh điệu F0 | Đồ thị Pitch Contour phản hồi dải tần số 80 - 450 Hz | ✅ Đạt |
 | 5 | Bảng viết Hanzi | Nhận diện đúng nét và cảnh báo ngược hướng (`isBackwards`) | ✅ Đạt |
 | 6 | Flashcard Quizlet | Hoạt động mượt mà 3 chế độ (Lật thẻ 3D, Quiz, Ghép từ) | ✅ Đạt |
 | 7 | Lưu trữ tiến độ | Lưu chuỗi streak và từ thuộc tính vào LocalStorage an toàn | ✅ Đạt |
+| 8 | Trợ lý Circle-to-Search | Nhận diện câu/từ khoanh vùng, tra cứu tài liệu kèm Offline Fallback | ✅ Đạt |
